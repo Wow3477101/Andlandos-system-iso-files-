@@ -3,13 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Andland OS v1.2 Build Matrix</title>
+    <title>Andland OS v1.2-stable Core</title>
     <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
             background-color: #050508;
             color: #ffffff;
@@ -21,16 +17,8 @@
             min-height: 100vh;
             overflow: hidden;
         }
-        #terminal-header {
-            margin-bottom: 12px;
-            text-align: center;
-        }
-        #terminal-header h1 {
-            font-size: 20px;
-            color: #39ff14;
-            letter-spacing: 2px;
-            text-shadow: 0 0 8px rgba(57, 255, 20, 0.6);
-        }
+        #terminal-header { margin-bottom: 12px; text-align: center; }
+        #terminal-header h1 { font-size: 20px; color: #39ff14; letter-spacing: 2px; text-shadow: 0 0 8px rgba(57, 255, 20, 0.5); }
         canvas {
             background-color: #0d0d11;
             border: 2px solid #1c1c22;
@@ -42,77 +30,47 @@
     </style>
 </head>
 <body>
-
     <div id="terminal-header">
         <h1>ANDLAND OPERATING SYSTEM</h1>
     </div>
-
     <canvas id="andlandScreen" width="800" height="600"></canvas>
 
     <script>
         const canvas = document.getElementById('andlandScreen');
         const ctx = canvas.getContext('2d');
-
-        // LOCKED TO VERSION 1.2
-        const VERSION = "v1.2";
+        const VERSION = "v1.2-stable";
         let currentPhase = "Booting"; 
         let bootStep = 0;
         let isSystemOn = true;
         let typedPassword = "";
         let loginError = false;
 
-        let username = localStorage.getItem("and_user") || "User";
-        let correctPassword = localStorage.getItem("and_pwd") || "1234";
-        let themeColor = localStorage.getItem("and_theme") || "#39ff14"; // Classic v1.2 green matrix theme
+        // --- CORE MANIFEST LOG DATA VARIABLES ---
+        let username = localStorage.getItem("and_user_v12") || "User";
+        let correctPassword = localStorage.getItem("and_pwd_v12") || "1234";
+        const themeColor = "#39ff14"; // Fixed Classic Green Matrix
 
-        let isGameInstalled = localStorage.getItem("and_installed") === "true";
-        let andCoins = parseFloat(localStorage.getItem("and_coins")) || 0;
-        let clickPower = parseFloat(localStorage.getItem("and_power")) || 0.25;
-        let upgradeCost = parseFloat(localStorage.getItem("and_cost")) || 10.0;
-
-        let isChangingPassword = false;
-        let isChangingName = false;
-        let inputBuffer = "";
-
-        let termInput = "";
-        let termLogs = [
-          "Andland Core Execution Environment Loaded.",
-          "Type 'help' for commands.",
-          ""
-        ];
-
+        let isChangingPassword = false, isChangingName = false, inputBuffer = "", termInput = "";
+        let termLogs = ["Andland Matrix Core Loaded. Type 'help' for layout guidelines.", ""];
         const bootLogs = [
-            "[ OK ] Loading Andland Bios Subsystems...",
-            "[ OK ] Mounting Virtual Root Directories...",
-            "[ OK ] Pulling local storage manifest data profiles...",
-            "[WARN] Kernel state: EXPERIMENTAL BUILD v1.2",
-            "ANDLAND OS SECURE KERNEL LOADED CORE COMPONENT."
+            "[ OK ] Initializing Andland Kernel Core Subsystems...",
+            "[ OK ] Allocating Protected Memory Matrix sectors...",
+            "[ OK ] Verifying Local Storage Registry Profiles...",
+            "[WARN] Operating Environment Mode: SECURE ARCHITECTURE",
+            "ANDLAND COOPERATIVE EMULATOR MATRIX OPERATIONAL."
         ];
 
         let icons = [
             { name: "Console",   x: 220, y: 120, w: 80, h: 80, color: "#39ff14", app: "Terminal" },
-            { name: "Settings",  x: 340, y: 120, w: 80, h: 80, color: "#007aff", app: "Settings" },
-            { name: "Files",     x: 460, y: 120, w: 80, h: 80, color: "#ffcc00", app: "Files" },
-            { name: "AndStore",  x: 580, y: 120, w: 80, h: 80, color: "#ac39ff", app: "AndStore" },
-            { name: "Recovery",  x: 220, y: 240, w: 80, h: 80, color: "#ff9500", app: "Recovery" },
-            { name: "Lock Screen",x: 340, y: 240, w: 80, h: 80, color: "#e0e0e5", app: "LockToggle" },
-            { name: "Power Off", x: 460, y: 240, w: 80, h: 80, color: "#707075", app: "Shutdown" }
+            { name: "Settings",  x: 340, y: 120, w: 80, h: 80, color: "#39ff14", app: "Settings" },
+            { name: "Files",     x: 460, y: 120, w: 80, h: 80, color: "#39ff14", app: "Files" },
+            { name: "Lock Screen",x: 580, y: 120, w: 80, h: 80, color: "#e0e0e5", app: "LockToggle" },
+            { name: "Power Off", x: 220, y: 240, w: 80, h: 80, color: "#707075", app: "Shutdown" }
         ];
 
-        if (isGameInstalled) {
-            if(!icons.some(i => i.app === "Miner")) {
-                icons.push({ name: "CoinMiner", x: 220, y: 360, w: 80, h: 80, color: "#00ffcc", app: "Miner" });
-            }
-        }
-
         function saveSystemState() {
-            localStorage.setItem("and_user", username);
-            localStorage.setItem("and_pwd", correctPassword);
-            localStorage.setItem("and_theme", themeColor);
-            localStorage.setItem("and_installed", isGameInstalled);
-            localStorage.setItem("and_coins", andCoins);
-            localStorage.setItem("and_power", clickPower);
-            localStorage.setItem("and_cost", upgradeCost);
+            localStorage.setItem("and_user_v12", username);
+            localStorage.setItem("and_pwd_v12", correctPassword);
         }
 
         function drawText(text, size, color, x, y, bold) {
@@ -120,179 +78,9 @@
             ctx.font = (bold ? "bold " : "") + size + "px monospace";
             ctx.fillText(text, x, y);
         }
-
+        
         function drawMatrixWallpaper() {
-            ctx.fillStyle = "#0c0c12";
-            ctx.fillRect(190, 40, 610, 560);
-            ctx.strokeStyle = "rgba(57, 255, 20, 0.05)";
-            ctx.lineWidth = 1;
-            for (let x = 190; x < canvas.width; x += 30) {
-                ctx.beginPath(); ctx.moveTo(x, 40); ctx.lineTo(x, canvas.height); ctx.stroke();
-            }
-            for (let y = 40; y < canvas.height; y += 30) {
-                ctx.beginPath(); ctx.moveTo(190, y); ctx.lineTo(canvas.width, y); ctx.stroke();
-            }
-        }
-
-        function render() {
-            if (!isSystemOn) {
-                ctx.fillStyle = "#000000";
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-                return;
-            }
-
-            ctx.fillStyle = "#0d0d11";
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            canvas.style.boxShadow = "0 0 25px " + themeColor;
-
-            if (currentPhase === "Booting") {
-                for (let i = 0; i <= bootStep; i++) {
-                    let color = "#39ff14";
-                    if (bootLogs[i].includes("[WARN]")) color = "#ffcc00"; 
-                    drawText(bootLogs[i], 15, color, 50, 100 + (i * 35), false);
-                }
-                ctx.fillStyle = themeColor;
-                ctx.fillRect(50, 480, (bootStep + 1) * 130, 15);
-                return;
-            }
-
-            if (currentPhase === "Locked") {
-                ctx.fillStyle = "#1c1c22";
-                ctx.fillRect(150, 120, 500, 360);
-                drawText("WELCOME TO " + VERSION, 26, themeColor, 210, 175, true);
-                ctx.fillStyle = "#000000"; ctx.fillRect(250, 260, 300, 45);
-                ctx.strokeStyle = loginError ? "#ff453a" : themeColor;
-                ctx.strokeRect(250, 260, 300, 45);
-                let stars = "";
-                for(let i=0; i<typedPassword.length; i++) { stars += "*"; }
-                drawText(stars, 24, "#ffffff", 270, 293, false);
-                return;
-            }
-
-            if (currentPhase === "Desktop") {
-                drawMatrixWallpaper();
-            }
-
-            // Top Bar
-            ctx.fillStyle = "#1c1c22";
-            ctx.fillRect(0, 0, canvas.width, 40);
-            drawText("Andland OS", 14, themeColor, 20, 25, true);
-            drawText(VERSION, 12, "#ffcc00", 125, 25, false);
-            drawText("USER: " + username.toUpperCase(), 13, "#ffffff", 240, 25, true);
-
-            // Sidebar Layout
-            ctx.fillStyle = "#1c1c22";
-            ctx.fillRect(10, 60, 160, 520);
-            drawText("[D] Desktop", 14, "#f0f0f5", 25, 130, false);
-            drawText("[1] Terminal", 14, "#39ff14", 25, 160, false);
-            drawText("[2] Settings", 14, "#007aff", 25, 190, false);
-            drawText("[3] Files", 14, "#ffcc00", 25, 220, false);
-
-            if (currentPhase === "Desktop") {
-                drawText("System Dashboard " + VERSION, 24, "#f0f0f5", 220, 80, true);
-                icons.forEach(function(icon) {
-                    ctx.fillStyle = "rgba(28, 28, 34, 0.85)";
-                    ctx.fillRect(icon.x, icon.y, icon.w, icon.h);
-                    ctx.fillStyle = icon.color;
-                    ctx.fillRect(icon.x, icon.y + 70, icon.w, 10);
-                    drawText(icon.name, 11, "#f0f0f5", icon.x + 4, icon.y + 40, false);
-                });
-            }
-            else if (currentPhase === "Terminal") {
-                ctx.fillStyle = "#000000"; ctx.fillRect(190, 60, 590, 520);
-                drawText("Andland Core Shell Interface", 14, "#39ff14", 205, 80, true);
-                let startY = 120;
-                termLogs.slice(-15).forEach((log, index) => {
-                    drawText(log, 14, "#39ff14", 205, startY + (index * 22), false);
-                });
-                drawText(username.toLowerCase() + "@andland:~$ " + termInput + "_", 14, "#ffffff", 205, 500, false);
-            }
-            else if (currentPhase === "Settings") {
-                ctx.fillStyle = "#15151a"; ctx.fillRect(190, 60, 590, 520);
-                drawText("System Framework Settings", 18, "#ffffff", 210, 88, true);
-                drawText("Current User: " + username, 14, "#f0f0f5", 210, 140, false);
-                drawText("Theme Color: " + themeColor, 14, "#f0f0f5", 210, 170, false);
-            }
-            else if (currentPhase === "Files") {
-                ctx.fillStyle = "#000000"; ctx.fillRect(190, 60, 590, 520);
-                drawText("Root Explorer", 14, "#ffcc00", 205, 80, true);
-                drawText("[FILE] andland_core.cfg", 14, "#ffffff", 220, 140, false);
-            }
-            else if (currentPhase === "Shutdown") {
-                ctx.fillStyle = "#000000"; ctx.fillRect(0, 0, canvas.width, canvas.height);
-                drawText("Powering off...", 20, "#ff453a", 320, 260, true);
-                setTimeout(() => { isSystemOn = false; render(); }, 1500);
-            }
-        }
-
-        function executeTerminalCommand(cmd) {
-            let clearCmd = cmd.trim().toLowerCase();
-            termLogs.push(username.toLowerCase() + "@andland:~$ " + cmd);
-            if (clearCmd === "help") {
-                termLogs.push(" Commands: help, neofetch, clear");
-            } else if (clearCmd === "neofetch") {
-                termLogs.push(" OS: Andland OS " + VERSION);
-                termLogs.push(" Architecture: Intel Core i9 Processing Grid");
-                termLogs.push(" Display Protocol: Wayland Server Link");
-            } else if (clearCmd === "clear") {
-                termLogs = [];
-            } else {
-                termLogs.push(" Command not found.");
-            }
-            termLogs.push("");
-        }
-
-        const bootTimer = setInterval(function() {
-            if (bootStep < bootLogs.length - 1) { bootStep++; render(); } 
-            else { clearInterval(bootTimer); currentPhase = "Locked"; render(); }
-        }, 600);
-
-        window.addEventListener('keydown', function(e) {
-            if (!isSystemOn) return;
-            if (currentPhase !== "Locked" && currentPhase !== "Terminal") {
-                const key = e.key.toUpperCase();
-                if (key === '1') { currentPhase = "Terminal"; render(); return; }
-                if (key === '2') { currentPhase = "Settings"; render(); return; }
-                if (key === '3') { currentPhase = "Files"; render(); return; }
-                if (key === 'D') { currentPhase = "Desktop"; render(); return; }
-            }
-            if (currentPhase === "Locked") {
-                if (e.key.length === 1) typedPassword += e.key;
-                else if (e.key === "Backspace") typedPassword = typedPassword.slice(0, -1);
-                else if (e.key === "Enter") {
-                    if (typedPassword === correctPassword) { currentPhase = "Desktop"; typedPassword = ""; } 
-                    else { typedPassword = ""; loginError = true; }
-                }
-                render(); return;
-            }
-            if (currentPhase === "Terminal") {
-                if (e.key === "Enter") { executeTerminalCommand(termInput); termInput = ""; } 
-                else if (e.key === "Backspace") termInput = termInput.slice(0, -1);
-                else if (e.key === "Escape") currentPhase = "Desktop";
-                else if (e.key.length === 1) termInput += e.key;
-                render(); return;
-            }
-        });
-
-        canvas.addEventListener('click', function(e) {
-            if (currentPhase === "Booting" || !isSystemOn) return;
-            const rect = canvas.getBoundingClientRect();
-            const mouseX = e.clientX - rect.left;
-            const mouseY = e.clientY - rect.top;
-
-            if (currentPhase === "Desktop") {
-                icons.forEach(function(icon) {
-                    if (mouseX >= icon.x && mouseX <= (icon.x + icon.w) && mouseY >= icon.y && mouseY <= (icon.y + icon.h)) {
-                        if(icon.app === "LockToggle") currentPhase = "Locked";
-                        else if(icon.app === "Shutdown") currentPhase = "Shutdown";
-                        else currentPhase = icon.app;
-                        render();
-                    }
-                });
-            }
-        });
-
-        render();
-    </script>
-</body>
-</html>
+            ctx.fillStyle = "#0c0c12"; ctx.fillRect(190, 40, 610, 560);
+            ctx.strokeStyle = "rgba(57, 255, 20, 0.05)"; ctx.lineWidth = 1;
+            for (let x = 190; x < canvas.width; x += 30) { ctx.beginPath(); ctx.moveTo(x, 40); ctx.lineTo(x, canvas.height); ctx.stroke(); }
+            for (let y = 40; y < canvas.height; y += 30) { ctx.beginPath(); ctx.moveTo(190, y); ctx.lineTo(canvas.width, y
