@@ -1,14 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Andland OS</title>
+  <style>
+    body {
+      background-color: #0a0a0c;
+      margin: 0;
+      padding: 0;
+    }
+  </style>
+</head>
+<body>
+
 <div style="text-align: center; margin-top: 20px;">
   <canvas id="andlandScreen" width="800" height="600" style="background-color: #0d0d11; border: 4px solid #333; border-radius: 8px; box-shadow: 0 0 25px rgba(0, 122, 255, 0.4);"></canvas>
 </div>
-
-<style>
-  body {
-    background-color: #0a0a0c;
-    margin: 0;
-    padding: 0;
-  }
-</style>
 
 <script>
 window.onload = function() {
@@ -116,54 +124,4 @@ window.onload = function() {
           
           icons.forEach(function(icon) {
               ctx.fillStyle = "#1c1c22";
-              ctx.fillRect(icon.x, icon.y, icon.w, icon.h);
-              ctx.fillStyle = icon.color;
-              ctx.fillRect(icon.x, icon.y + 70, icon.w, 10);
-              drawText(icon.name, 12, "#f0f0f5", icon.x + 5, icon.y + 40, false);
-          });
-      } 
-      else if (currentPhase === "Terminal") {
-          ctx.fillStyle = "#000000";
-          ctx.fillRect(190, 60, 590, 520);
-          ctx.fillStyle = "#34343d";
-          ctx.fillRect(190, 60, 590, 30);
-          drawText("Andland Terminal Core", 14, "#39ff14", 205, 80, true);
-          drawText("alex@andland_vm:~$ neofetch", 14, "#39ff14", 205, 120, false);
-          drawText("OS: Andland OS " + VERSION, 14, "#f0f0f5", 205, 150, false);
-          drawText("Host: Intel Core i9 Emulator Sandbox Engine", 14, "#f0f0f5", 205, 170, false);
-          drawText("Display: Wayland Server Environment", 14, "#f0f0f5", 205, 190, false);
-          drawText("Press 'D' to return to desktop.", 12, "#a0a0a5", 205, 560, false);
-      } 
-      else if (currentPhase === "Settings") {
-          ctx.fillStyle = "#15151a";
-          ctx.fillRect(190, 60, 590, 520);
-          ctx.fillStyle = "#1c1c22";
-          ctx.fillRect(190, 60, 590, 45);
-          drawText("Control Panel Settings", 18, "#ffffff", 210, 88, true);
-          
-          ctx.fillStyle = "#1c1c22";
-          ctx.fillRect(210, 130, 550, 105);
-          drawText("BUILD SPECIFICATIONS", 12, "#ffcc00", 225, 150, true);
-          drawText("System Branch: Andland OS " + VERSION, 14, "#f0f0f5", 225, 175, false);
-          drawText("Channel: Unstable / Experimental Developer", 14, "#a0a0a5", 225, 195, false);
-          drawText("Security Lock Phrase: [ 1234 ]", 14, "#39ff14", 225, 215, false);
-
-          ctx.fillStyle = "#1c1c22";
-          ctx.fillRect(210, 255, 550, 105);
-          drawText("SYSTEM ENV VARIABLES", 12, "#007aff", 225, 275, true);
-          drawText("Display Target: GitHub Pages Host Layer", 14, "#f0f0f5", 225, 300, false);
-          drawText("Graphics Engine: Wayland Matrix Driver", 14, "#f0f0f5", 225, 320, false);
-          drawText("Root Access Level: DECRYPTED/FULL SYSTEM", 14, "#39ff14", 225, 340, false);
-          
-          drawText("Press 'D' to back out to apps grid panel.", 12, "#a0a0a5", 210, 560, false);
-      }
-      else if (currentPhase === "Files") {
-          ctx.fillStyle = "#000000";
-          ctx.fillRect(190, 60, 590, 520);
-          ctx.fillStyle = "#ffcc00";
-          ctx.fillRect(190, 60, 590, 30);
-          drawText("File Manager - Root Browser", 14, "#000000", 205, 80, true);
-          drawText("Directory: /root/desktop/", 14, "#a0a0a5", 205, 120, false);
-          drawText("[DIR]  system_apps/", 14, "#ffcc00", 220, 150, false);
-          drawText("[DIR]  developer_logs/", 14, "#ffcc00", 220, 175, false);
-          drawText("[FILE] andland_core.cfg", 14, "#ffffff", 220, 200, false);
+              ctx.fillRect(
