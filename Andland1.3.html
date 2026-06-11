@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Andland OS v1.3-Wallpaper</title>
+    <title>Andland OS v1.3 - Safe and Sound (Mobile Layout)</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
             background-color: #000000;
-            color: #39ff14;
-            font-family: 'Courier New', Courier, monospace;
+            color: #ffffff;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -17,280 +17,90 @@
             min-height: 100vh;
             overflow: hidden;
         }
-        #title-bar {
-            width: 800px;
-            background-color: #111;
-            padding: 5px 10px;
-            border: 2px solid #333;
-            border-bottom: none;
-            display: flex;
-            justify-content: space-between;
-            font-size: 14px;
-        }
         canvas {
             background-color: #000000;
-            border: 2px solid #333;
+            border: 2px solid #222;
             display: block;
+            border-radius: 24px; /* Curved phone border look */
+            box-shadow: 0 20px 40px rgba(0,0,0,0.8);
         }
     </style>
 </head>
 <body>
 
-    <div id="title-bar">
-        <span>Andland OS Flagship Platform</span>
-        <span style="color: #66aaff;">v1.3-Wallpaper</span>
-    </div>
     <canvas id="andlandScreen" width="800" height="600"></canvas>
 
     <script>
         const canvas = document.getElementById('andlandScreen');
         const ctx = canvas.getContext('2d');
-        const VERSION = "v1.3";
+        const VERSION = "v1.3-MobileSafe";
         
         let currentPhase = "Booting";
         let bootStep = 0;
         let typedPassword = "";
+        
+        // --- SECURE USER VARIABLES ---
         let username = localStorage.getItem("and_user_v13") || "User";
         let correctPassword = localStorage.getItem("and_pwd_v13") || "1234";
-        let themeColor = localStorage.getItem("and_theme_v13") || "#39ff14";
+        let themeColor = localStorage.getItem("and_theme_v13") || "#007aff"; // Default iOS Blue
         
-        // --- WALLPAPER SYSTEM CONFIG ---
-        let wallpaperMode = localStorage.getItem("and_wp_mode") || "matrix"; // "matrix" or "image"
-        let wallpaperURL = localStorage.getItem("and_wp_url") || "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=800&auto=format&fit=crop";
-        
-        let bgImage = new Image();
-        bgImage.src = wallpaperURL;
-        let isEditingURL = false;
-        let urlBuffer = "";
+        let isEditingName = false;
+        let isEditingPass = false;
+        let inputBuffer = "";
 
         let termInput = "";
-        let termLogs = ["Andland UI Framework Active. Settings subsystem linked.", ""];
+        let termLogs = ["Andland Mobile UI Layer Active.", ""];
 
         const bootLogs = [
-            "DECOMPRESSING V1.3 WALLPAPER ENVIRONMENT...",
-            "[OK] PARSING IMAGE HOOK REGISTRIES",
-            "[OK] LOCALSTORAGE CACHE VALIDATED",
-            "[OK] GRAPHICS ENGINE RUNNING ON WAYLAND PROTOCOL",
-            "BOOT SEQUENCE COMPLETE. ENTER SECURE ENVIRONMENT..."
+            "LOADING ANDLAND MOBILE OS SUBSYSTEMS...",
+            "[OK] COMPILING GRAPHIC UI LAYOUT CELLS",
+            "[OK] ENCRYPTING DATA ACCELERATION VAULT",
+            "[OK] MOBILE SYSTEM INTEGRITY: VERIFIED",
+            "BOOT COMPLETE. BOOTING INTO SMARTPHONE ENGINE..."
         ];
 
-        function drawText(text, color, x, y, size = 16) {
+        function drawText(text, size, color, x, y, alignment = "left", bold = false) {
             ctx.fillStyle = color;
-            ctx.font = size + "px monospace";
+            ctx.font = (bold ? "bold " : "") + size + "px -apple-system, BlinkMacSystemFont, sans-serif";
+            ctx.textAlign = alignment;
             ctx.fillText(text, x, y);
         }
 
-        // Draws the matrix background fallback if image is loading or selected
-        function drawBackground() {
-            if (wallpaperMode === "image" && bgImage.complete) {
-                ctx.drawImage(bgImage, 0, 0, canvas.width, canvas.height);
-                // Add a slight dark overlay so text remains easy to read over bright images
-                ctx.fillStyle = "rgba(0,0,0,0.4)";
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-            } else {
-                // Classic Matrix Tech Grid
-                ctx.fillStyle = "#000000";
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-                ctx.strokeStyle = "rgba(57, 255, 20, 0.04)";
-                for(let i = 0; i < canvas.width; i += 40) {
-                    ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, canvas.height); ctx.stroke();
-                }
-                for(let j = 0; j < canvas.height; j += 40) {
-                    ctx.beginPath(); ctx.moveTo(0, j); ctx.lineTo(canvas.width, j); ctx.stroke();
-                }
-            }
-        }
-
         function render() {
+            ctx.textAlign = "left"; // Reset defaults
+            ctx.fillStyle = "#0a0a0c";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
             // 1. BOOT PHASE
             if (currentPhase === "Booting") {
-                ctx.fillStyle = "#000000"; ctx.fillRect(0, 0, canvas.width, canvas.height);
                 for (let i = 0; i <= bootStep; i++) {
-                    drawText(bootLogs[i], "#39ff14", 50, 80 + (i * 30));
+                    drawText(bootLogs[i], 15, "#39ff14", 60, 100 + (i * 35));
                 }
                 return;
             }
 
-            // Draw Background environment for everything past booting
-            drawBackground();
+            // --- SMARTPHONE FRAME CONTAINER DESIGN ---
+            // Centered phone screen shape: x=240, y=30, width=320, height=540 (Perfect 9:16 mobile aspect)
+            const pX = 240, pY = 30, pW = 320, pH = 540;
+            
+            // Draw wallpaper background inside phone viewport
+            ctx.fillStyle = "#121214";
+            ctx.fillRect(pX, pY, pW, pH);
 
             // 2. LOCK SCREEN PHASE
             if (currentPhase === "Locked") {
-                ctx.fillStyle = "rgba(0, 0, 0, 0.75)";
-                ctx.fillRect(150, 120, 500, 360);
-                ctx.strokeStyle = themeColor;
-                ctx.strokeRect(150, 120, 500, 360);
+                // Top clock layout
+                drawText("12:00", 38, "#ffffff", pX + (pW/2), pY + 90, "center", false);
+                drawText("Andland Mobile Secure Node", 12, "rgba(255,255,255,0.6)", pX + (pW/2), pY + 120, "center");
 
-                drawText("=== SECURITY LOCKLAYER ===", themeColor, 250, 180);
-                drawText("OPERATOR: " + username.toUpperCase(), "#ffffff", 250, 220);
-                drawText("ACCESS PASSWORD:", themeColor, 250, 270);
-                
-                ctx.strokeStyle = "#444";
-                ctx.strokeRect(250, 290, 300, 40);
-                
+                // Lock Keypad UI Frame
+                ctx.fillStyle = "#1c1c1e";
+                ctx.fillRect(pX + 25, pY + 280, pW - 50, 44);
+                ctx.strokeStyle = themeColor;
+                ctx.lineWidth = 1.5;
+                ctx.strokeRect(pX + 25, pY + 280, pW - 50, 44);
+
                 let stars = "";
-                for(let i = 0; i < typedPassword.length; i++) stars += "*";
-                drawText(stars + "_", "#ffffff", 260, 315, 20);
-                return;
-            }
-
-            // 3. DESKTOP ENVIRONMENT
-            if (currentPhase === "Desktop") {
-                ctx.fillStyle = "rgba(0,0,0,0.6)";
-                ctx.fillRect(20, 20, 450, 280);
-                ctx.strokeStyle = themeColor;
-                ctx.strokeRect(20, 20, 450, 280);
-
-                drawText("=== ANDLAND DESKTOP ===", themeColor, 40, 50);
-                drawText("User Account: " + username, "#ffffff", 40, 90);
-                drawText("Wallpaper Mode: " + wallpaperMode.toUpperCase(), "#ffcc00", 40, 120, 14);
-                
-                drawText("[1] Open Console Shell", themeColor, 40, 170);
-                drawText("[2] Wallpapers & Personalization", themeColor, 40, 210);
-                drawText("[L] Lock Device Environment", "#ff453a", 40, 250);
-            }
-
-            // 4. TERMINAL SHELL
-            if (currentPhase === "Terminal") {
-                ctx.fillStyle = "rgba(0,0,0,0.85)";
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-                drawText("--- CONSOLE TERMINAL ENGINE --- (ESC to Close)", themeColor, 30, 40, 14);
-                termLogs.slice(-20).forEach((log, idx) => {
-                    drawText(log, themeColor, 30, 80 + (idx * 22), 14);
-                });
-                drawText(username.toLowerCase() + "@andland:~$ " + termInput + "_", "#ffffff", 30, 540, 14);
-            }
-
-            // 5. SETTINGS PANEL (WALLPAPERS)
-            if (currentPhase === "Settings") {
-                ctx.fillStyle = "rgba(0,0,0,0.8)";
-                ctx.fillRect(30, 30, 740, 540);
-                ctx.strokeStyle = themeColor;
-                ctx.strokeRect(30, 30, 740, 540);
-
-                drawText("--- WALLPAPER ENGINE & CONFIG --- (ESC to Exit)", themeColor, 50, 60);
-                
-                drawText("[M] Switch to Classic Matrix Grid", wallpaperMode === "matrix" ? themeColor : "#888", 50, 130);
-                drawText("[I] Switch to Live Custom Web Image", wallpaperMode === "image" ? themeColor : "#888", 50, 170);
-                
-                drawText("[W] Input Custom Wallpaper URL Image", "#ffffff", 50, 240);
-                
-                ctx.fillStyle = "#111";
-                ctx.fillRect(50, 265, 700, 35);
-                ctx.strokeStyle = isEditingURL ? "#39ff14" : "#444";
-                ctx.strokeRect(50, 265, 700, 35);
-
-                if (isEditingURL) {
-                    drawText(urlBuffer + "_", "#39ff14", 60, 288, 12);
-                } else {
-                    let shortURL = wallpaperURL.length > 75 ? wallpaperURL.substring(0, 72) + "..." : wallpaperURL;
-                    drawText("URL: " + shortURL, "#aaa", 60, 288, 12);
-                }
-
-                drawText("--- THEME MATRIX CONFIG ---", themeColor, 50, 360);
-                drawText("[G] Green Style  |  [B] Blue Cyber Style", "#ffffff", 50, 400, 14);
-                drawText("Current Theme Hex Color: " + themeColor, themeColor, 50, 440, 14);
-            }
-        }
-
-        // Boot Pipeline
-        const bootInterval = setInterval(() => {
-            if (bootStep < bootLogs.length - 1) {
-                bootStep++; render();
-            } else {
-                clearInterval(bootInterval);
-                currentPhase = "Locked"; render();
-            }
-        }, 600);
-
-        function runCommand(cmd) {
-            let clean = cmd.trim().toLowerCase();
-            termLogs.push(username.toLowerCase() + "@andland:~$ " + cmd);
-            
-            if (clean === "help") {
-                termLogs.push(" Core parameters: help, neofetch, clear, matrixmode, imagemode");
-            } else if (clean === "neofetch") {
-                termLogs.push(" OS: Andland OS " + VERSION);
-                termLogs.push(" Graphic Pipeline: Wayland Compositor Driver Stack");
-                termLogs.push(" Wallpaper State: " + wallpaperMode);
-            } else if (clean === "matrixmode") {
-                wallpaperMode = "matrix"; localStorage.setItem("and_wp_mode", "matrix");
-                termLogs.push(" Core swapped to matrix graphic environment.");
-            } else if (clean === "imagemode") {
-                wallpaperMode = "image"; localStorage.setItem("and_wp_mode", "image");
-                termLogs.push(" Core swapped to raw image canvas environment.");
-            } else if (clean === "clear") {
-                termLogs = [];
-            } else {
-                termLogs.push(" Direct pipeline command execution failed.");
-            }
-            termLogs.push("");
-        }
-
-        window.addEventListener('keydown', e => {
-            if (currentPhase === "Booting") return;
-
-            // Handle Inputting a Custom URL
-            if (isEditingURL) {
-                if (e.key === "Enter") {
-                    if (urlBuffer.trim() !== "") {
-                        wallpaperURL = urlBuffer.trim();
-                        bgImage.src = wallpaperURL;
-                        localStorage.setItem("and_wp_url", wallpaperURL);
-                    }
-                    isEditingURL = false; urlBuffer = "";
-                } else if (e.key === "Backspace") {
-                    urlBuffer = urlBuffer.slice(0, -1);
-                } else if (e.key.length === 1) {
-                    urlBuffer += e.key;
-                }
-                render(); return;
-            }
-
-            if (currentPhase === "Locked") {
-                if (e.key === "Enter") {
-                    if (typedPassword === correctPassword) { currentPhase = "Desktop"; typedPassword = ""; }
-                    else { typedPassword = ""; }
-                } else if (e.key === "Backspace") { typedPassword = typedPassword.slice(0, -1); }
-                else if (e.key.length === 1) { typedPassword += e.key; }
-                render(); return;
-            }
-
-            if (currentPhase === "Terminal") {
-                if (e.key === "Enter") { runCommand(termInput); termInput = ""; }
-                else if (e.key === "Backspace") { termInput = termInput.slice(0, -1); }
-                else if (e.key === "Escape") { currentPhase = "Desktop"; }
-                else if (e.key.length === 1) { termInput += e.key; }
-                render(); return;
-            }
-
-            // Settings Hotkeys
-            if (currentPhase === "Settings") {
-                if (e.key.toLowerCase() === "m") {
-                    wallpaperMode = "matrix"; localStorage.setItem("and_wp_mode", "matrix");
-                } else if (e.key.toLowerCase() === "i") {
-                    wallpaperMode = "image"; localStorage.setItem("and_wp_mode", "image");
-                } else if (e.key.toLowerCase() === "w") {
-                    isEditingURL = true; urlBuffer = "";
-                } else if (e.key.toLowerCase() === "g") {
-                    themeColor = "#39ff14"; localStorage.setItem("and_theme_v13", themeColor);
-                } else if (e.key.toLowerCase() === "b") {
-                    themeColor = "#55aaff"; localStorage.setItem("and_theme_v13", themeColor);
-                }
-            }
-
-            // Base UI Navigation
-            if (e.key === "Escape") { currentPhase = "Desktop"; }
-            else if (e.key === "1") { currentPhase = "Terminal"; }
-            else if (e.key === "2") { currentPhase = "Settings"; }
-            else if (e.key.toLowerCase() === "l") { currentPhase = "Locked"; }
-            render();
-        });
-
-        // Trigger safe render check when wallpaper completely loads up on network thread
-        bgImage.onload = () => { render(); };
-        render();
-    </script>
-</body>
-</html>
+                for(let i = 0; i < typedPassword.length; i++) stars += "●";
+                if (stars === "") {
+                    drawText("Enter Password Key", 14, "rgba(255,255,255,0.3)", pX + (
