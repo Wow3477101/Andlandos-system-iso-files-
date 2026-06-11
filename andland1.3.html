@@ -1,673 +1,535 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Andland OS v1.4-stable Build Matrix</title>
-    <style>
-        /* Core UI Frame Constraints Layout */
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
+const canvas = document.getElementById('andlandScreen');
+const ctx = canvas.getContext('2d');
+
+const VERSION = "v1.3-stable";
+let currentPhase = "Booting"; 
+let bootStep = 0;
+let isSystemOn = true;
+let typedPassword = "";
+let loginError = false;
+
+// --- DYNAMIC LOAD / DEFAULT SAVE ENGINE VARIABLES ---
+let username = localStorage.getItem("and_user") || "User";
+let correctPassword = localStorage.getItem("and_pwd") || "1234";
+let themeColor = localStorage.getItem("and_theme") || "#007aff";
+
+let isGameInstalled = localStorage.getItem("and_installed") === "true";
+let andCoins = parseFloat(localStorage.getItem("and_coins")) || 0;
+let clickPower = parseFloat(localStorage.getItem("and_power")) || 0.25;
+let upgradeCost = parseFloat(localStorage.getItem("and_cost")) || 10.0;
+
+// System Input Modifiers
+let isChangingPassword = false;
+let isChangingName = false;
+let inputBuffer = "";
+
+// Terminal States
+let termInput = "";
+let termLogs = [
+  "Andland Core Execution Environment Loaded.",
+  "Type 'help' for a list of security commands.",
+  ""
+];
+
+const bootLogs = [
+    "[ OK ] Loading Andland Bios Subsystems...",
+    "[ OK ] Mounting Virtual Root Directories...",
+    "[ OK ] Pulling local storage manifest data profiles...",
+    "[WARN] Kernel state: EXPERIMENTAL BUILD v1.3",
+    "ANDLAND OS SECURE KERNEL LOADED CORE COMPONENT."
+];
+
+// --- APP LAYOUT GRID (Now includes Reset System on Home Screen) ---
+let icons = [
+    { name: "Console",   x: 220, y: 120, w: 80, h: 80, color: "#39ff14", app: "Terminal" },
+    { name: "Settings",  x: 340, y: 120, w: 80, h: 80, color: "#007aff", app: "Settings" },
+    { name: "Files",     x: 460, y: 120, w: 80, h: 80, color: "#ffcc00", app: "Files" },
+    { name: "AndStore",  x: 580, y: 120, w: 80, h: 80, color: "#ac39ff", app: "AndStore" },
+    { name: "Recovery",  x: 220, y: 240, w: 80, h: 80, color: "#ff9500", app: "Recovery" },
+    { name: "Lock Screen",x: 340, y: 240, w: 80, h: 80, color: "#e0e0e5", app: "LockToggle" },
+    { name: "Reset System",x: 460, y: 240, w: 80, h: 80, color: "#ff453a", app: "DirectReset" },
+    { name: "Power Off", x: 580, y: 240, w: 80, h: 80, color: "#707075", app: "Shutdown" }
+];
+
+if (isGameInstalled) {
+    if(!icons.some(i => i.app === "Miner")) {
+        // Move CoinMiner to row 3 if desktop is full
+        icons.push({ name: "CoinMiner", x: 220, y: 360, w: 80, h: 80, color: "#00ffcc", app: "Miner" });
+    }
+}
+
+function saveSystemState() {
+    localStorage.setItem("and_user", username);
+    localStorage.setItem("and_pwd", correctPassword);
+    localStorage.setItem("and_theme", themeColor);
+    localStorage.setItem("and_installed", isGameInstalled);
+    localStorage.setItem("and_coins", andCoins);
+    localStorage.setItem("and_power", clickPower);
+    localStorage.setItem("and_cost", upgradeCost);
+}
+
+// --- FACTORY RESET CORE ENGINE ---
+function triggerFactoryReset() {
+    currentPhase = "Booting";
+    bootStep = 0;
+    termLogs = ["Complete architecture firmware flash execution completed.", "All matrix structures wiped back to manufacturing limits.", ""];
+    
+    localStorage.clear();
+
+    username = "User";
+    correctPassword = "1234";
+    themeColor = "#007aff";
+    isGameInstalled = false;
+    andCoins = 0;
+    clickPower = 0.25;
+    upgradeCost = 10.0;
+    icons = [
+        { name: "Console",   x: 220, y: 120, w: 80, h: 80, color: "#39ff14", app: "Terminal" },
+        { name: "Settings",  x: 340, y: 120, w: 80, h: 80, color: "#007aff", app: "Settings" },
+        { name: "Files",     x: 460, y: 120, w: 80, h: 80, color: "#ffcc00", app: "Files" },
+        { name: "AndStore",  x: 580, y: 120, w: 80, h: 80, color: "#ac39ff", app: "AndStore" },
+        { name: "Recovery",  x: 220, y: 240, w: 80, h: 80, color: "#ff9500", app: "Recovery" },
+        { name: "Lock Screen",x: 340, y: 240, w: 80, h: 80, color: "#e0e0e5", app: "LockToggle" },
+        { name: "Reset System",x: 460, y: 240, w: 80, h: 80, color: "#ff453a", app: "DirectReset" },
+        { name: "Power Off", x: 580, y: 240, w: 80, h: 80, color: "#707075", app: "Shutdown" }
+    ];
+    
+    const recoveryTimer = setInterval(function() {
+        if (bootStep < bootLogs.length - 1) {
+            bootStep++; render();
+        } else {
+            clearInterval(recoveryTimer);
+            currentPhase = "Locked"; render();
         }
-        body {
-            background-color: #050508;
-            color: #ffffff;
-            font-family: 'Courier New', Courier, monospace;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            overflow: hidden;
+    }, 500);
+    render();
+}
+
+function drawText(text, size, color, x, y, bold) {
+    ctx.fillStyle = color;
+    ctx.font = (bold ? "bold " : "") + size + "px monospace";
+    ctx.fillText(text, x, y);
+}
+
+function render() {
+    if (!isSystemOn) {
+        ctx.fillStyle = "#000000";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        return;
+    }
+
+    ctx.fillStyle = "#0d0d11";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    canvas.style.boxShadow = "0 0 25px " + themeColor;
+
+    if (currentPhase === "Booting") {
+        for (let i = 0; i <= bootStep; i++) {
+            let color = "#39ff14";
+            if (bootLogs[i].includes("[WARN]")) color = "#ffcc00"; 
+            drawText(bootLogs[i], 15, color, 50, 100 + (i * 35), false);
         }
-        #terminal-header {
-            margin-bottom: 12px;
-            text-align: center;
+        ctx.fillStyle = themeColor;
+        ctx.fillRect(50, 480, (bootStep + 1) * 130, 15);
+        return;
+    }
+
+    if (currentPhase === "Locked") {
+        ctx.fillStyle = "#1c1c22";
+        ctx.fillRect(150, 120, 500, 360);
+        
+        drawText("WELCOME, " + username.toUpperCase(), 26, themeColor, 210, 175, true);
+        drawText("Enter Secure Password to decrypt desktop Matrix:", 13, "#a0a0a5", 210, 220, false);
+        
+        ctx.fillStyle = "#000000";
+        ctx.fillRect(250, 260, 300, 45);
+        ctx.strokeStyle = loginError ? "#ff453a" : themeColor;
+        ctx.lineWidth = 2;
+        ctx.strokeRect(250, 260, 300, 45);
+        
+        let stars = "";
+        for(let i=0; i<typedPassword.length; i++) { stars += "*"; }
+        drawText(stars, 24, "#ffffff", 270, 293, false);
+        
+        if (loginError) {
+            drawText("INCORRECT PHRASE - ATTEMPT BLOCKED", 12, "#ff453a", 280, 335, true);
+        } else {
+            drawText("Type password & press ENTER to load core link", 12, "#707075", 240, 335, false);
         }
-        #terminal-header h1 {
-            font-size: 20px;
-            color: #55aaff;
-            letter-spacing: 2px;
-            text-shadow: 0 0 8px rgba(0, 122, 255, 0.6);
+        return;
+    }
+
+    // Top Header Status Ribbon
+    ctx.fillStyle = "#1c1c22";
+    ctx.fillRect(0, 0, canvas.width, 40);
+    drawText("Andland OS", 14, themeColor, 20, 25, true);
+    drawText(VERSION, 12, "#ffcc00", 125, 25, false);
+    drawText("USER: " + username.toUpperCase(), 13, "#ffffff", 240, 25, true);
+    drawText("SYSTEM OPERATIONAL", 14, "#39ff14", 620, 25, false);
+
+    // Sidebar panel controls
+    ctx.fillStyle = "#1c1c22";
+    ctx.fillRect(10, 60, 160, 520);
+    drawText("CORE SYSTEM", 12, "#a0a0a5", 25, 90, true);
+    drawText("[D] Desktop Panel", 14, "#f0f0f5", 25, 130, false);
+    drawText("[1] Terminal", 14, "#39ff14", 25, 160, false);
+    drawText("[2] Settings", 14, themeColor, 25, 190, false);
+    drawText("[3] Files", 14, "#ffcc00", 25, 220, false);
+    drawText("[4] AndStore", 14, "#ac39ff", 25, 250, false);
+    drawText("[5] Recovery", 14, "#ff9500", 25, 280, false);
+    if (isGameInstalled) {
+        drawText("[G] AndCoin Miner", 14, "#00ffcc", 25, 310, false);
+    }
+    
+    ctx.fillStyle = "#ff453a";
+    ctx.fillRect(20, 520, 140, 35);
+    drawText("SHUTDOWN", 12, "#ffffff", 50, 542, true);
+
+    if (currentPhase === "Desktop") {
+        drawText("Welcome Back, " + username, 24, "#f0f0f5", 220, 80, true);
+        drawText("Environment: Architecture Matrix Secure Layer", 14, "#707075", 220, 105, false);
+        
+        icons.forEach(function(icon) {
+            ctx.fillStyle = "#1c1c22";
+            ctx.fillRect(icon.x, icon.y, icon.w, icon.h);
+            ctx.fillStyle = icon.app === "Settings" ? themeColor : icon.color;
+            ctx.fillRect(icon.x, icon.y + 70, icon.w, 10);
+            drawText(icon.name, 11, "#f0f0f5", icon.x + 4, icon.y + 40, false);
+        });
+    } 
+    else if (currentPhase === "Terminal") {
+        ctx.fillStyle = "#000000";
+        ctx.fillRect(190, 60, 590, 520);
+        ctx.fillStyle = "#34343d";
+        ctx.fillRect(190, 60, 590, 30);
+        drawText("Andland Terminal Core Interoperability", 14, "#39ff14", 205, 80, true);
+        
+        let startY = 120;
+        let maxLogs = 18;
+        let linesToShow = termLogs.slice(-maxLogs);
+        linesToShow.forEach((log, index) => {
+            drawText(log, 14, "#39ff14", 205, startY + (index * 22), false);
+        });
+
+        let promptY = startY + (linesToShow.length * 22);
+        if (promptY > 540) promptY = 540;
+        drawText(username.toLowerCase() + "@andland_vm:~$ " + termInput + "_", 14, "#ffffff", 205, promptY, false);
+        drawText("Press 'ESC' to drop out back to desktop panel.", 12, "#a0a0a5", 205, 560, false);
+    } 
+    else if (currentPhase === "Settings") {
+        ctx.fillStyle = "#15151a";
+        ctx.fillRect(190, 60, 590, 520);
+        ctx.fillStyle = "#1c1c22";
+        ctx.fillRect(190, 60, 590, 45);
+        drawText("Control Panel Customization Tweaker", 18, "#ffffff", 210, 88, true);
+        
+        ctx.fillStyle = "#1c1c22"; ctx.fillRect(210, 120, 550, 115);
+        drawText("ACCOUNT MANIFEST PROFILES", 12, "#ffcc00", 225, 140, true);
+        drawText("Current Username: " + username, 14, "#f0f0f5", 225, 165, false);
+        drawText("Security Key:     " + correctPassword, 14, "#f0f0f5", 225, 185, false);
+        
+        ctx.fillStyle = themeColor; ctx.fillRect(520, 145, 100, 30);
+        drawText("[EDIT NAME]", 11, "#ffffff", 535, 164, true);
+        ctx.fillStyle = themeColor; ctx.fillRect(635, 145, 110, 30);
+        drawText("[EDIT PWD]", 11, "#ffffff", 655, 164, true);
+
+        if (isChangingName || isChangingPassword) {
+            drawText("TYPE IN BOX & PRESS ENTER: " + inputBuffer + "_", 13, "#39ff14", 225, 218, true);
         }
-        #terminal-header p {
-            font-size: 11px;
-            color: #707075;
-            margin-top: 4px;
+
+        ctx.fillStyle = "#1c1c22"; ctx.fillRect(210, 250, 550, 105);
+        drawText("UI THEME GRAPHICS ENGINE", 12, "#007aff", 225, 270, true);
+        drawText("Click any sector block to re-route systemic layout colors:", 12, "#a0a0a5", 225, 292, false);
+        
+        ctx.fillStyle = "#007aff"; ctx.fillRect(225, 308, 50, 30); 
+        ctx.fillStyle = "#39ff14"; ctx.fillRect(295, 308, 50, 30); 
+        ctx.fillStyle = "#ff453a"; ctx.fillRect(365, 308, 50, 30); 
+        ctx.fillStyle = "#ac39ff"; ctx.fillRect(435, 308, 50, 30); 
+        ctx.fillStyle = "#ff9500"; ctx.fillRect(505, 308, 50, 30); 
+        
+        drawText("Press 'D' to back out to apps grid panel.", 12, "#a0a0a5", 210, 560, false);
+    }
+    else if (currentPhase === "Files") {
+        ctx.fillStyle = "#000000";
+        ctx.fillRect(190, 60, 590, 520);
+        ctx.fillStyle = "#ffcc00";
+        ctx.fillRect(190, 60, 590, 30);
+        drawText("File Manager - Root Browser", 14, "#000000", 205, 80, true);
+        drawText("Directory: /root/desktop/", 14, "#a0a0a5", 205, 120, false);
+        drawText("[DIR]  system_apps/", 14, "#ffcc00", 220, 150, false);
+        drawText("[DIR]  developer_logs/", 14, "#ffcc00", 220, 175, false);
+        drawText("[FILE] andland_core.cfg", 14, "#ffffff", 220, 200, false);
+        drawText("Press 'D' to drop out to desktop.", 12, "#a0a0a5", 205, 560, false);
+    }
+    else if (currentPhase === "AndStore") {
+        ctx.fillStyle = "#0b0612";
+        ctx.fillRect(190, 60, 590, 520);
+        ctx.fillStyle = "#ac39ff";
+        ctx.fillRect(190, 60, 590, 30);
+        drawText("AndStore Repository Market", 14, "#ffffff", 205, 80, true);
+        
+        ctx.fillStyle = "#1c1c22"; ctx.fillRect(210, 160, 530, 90);
+        drawText("AndCoin Miner v1.3", 16, "#ffffff", 230, 195, true);
+        drawText("Clicker architecture tool built for stress testing performance.", 12, "#a0a0a5", 230, 220, false);
+        
+        if (!isGameInstalled) {
+            ctx.fillStyle = "#39ff14"; ctx.fillRect(610, 185, 110, 40);
+            drawText("[INSTALL]", 13, "#000000", 632, 210, true);
+        } else {
+            ctx.fillStyle = "#555555"; ctx.fillRect(610, 185, 110, 40);
+            drawText("[INSTALLED]", 13, "#ffffff", 625, 210, true);
         }
-        /* Matrix Display Port Sandbox Hashing Canvas Box */
-        canvas {
-            background-color: #0d0d11;
-            border: 2px solid #1c1c22;
-            border-radius: 8px;
-            display: block;
-            cursor: pointer;
-            transition: box-shadow 0.3s ease;
+
+        drawText("Press 'D' to drop out to desktop.", 12, "#a0a0a5", 205, 560, false);
+    }
+    else if (currentPhase === "Miner") {
+        ctx.fillStyle = "#051410";
+        ctx.fillRect(190, 60, 590, 520);
+        ctx.fillStyle = "#00ffcc";
+        ctx.fillRect(190, 60, 590, 30);
+        drawText("AndCoin Miner Dashboard Engine", 14, "#000000", 205, 80, true);
+        
+        drawText("VIRTUAL ASSET WALLET BALANCE", 14, "#a0a0a5", 220, 120, false);
+        drawText(andCoins.toFixed(2) + " $AND", 36, "#00ffcc", 220, 165, true);
+        
+        ctx.fillStyle = "#1c1c22"; ctx.strokeStyle = "#00ffcc"; ctx.lineWidth = 2;
+        ctx.fillRect(220, 200, 250, 120); ctx.strokeRect(220, 200, 250, 120);
+        drawText("⛏️ TAP TO MINE", 18, "#ffffff", 270, 255, true);
+        drawText("Yield: +" + clickPower + " per strike", 12, "#a0a0a5", 260, 290, false);
+        
+        ctx.fillStyle = "#1c1c22"; ctx.strokeStyle = "#ffcc00";
+        ctx.fillRect(490, 200, 260, 120); ctx.strokeRect(490, 200, 260, 120);
+        drawText("🛒 HARDWARE TUNER UPGRADE", 13, "#ffcc00", 505, 225, true);
+        drawText("Current Power: +" + clickPower, 11, "#a0a0a5", 505, 250, false);
+        
+        ctx.fillStyle = andCoins >= upgradeCost ? "#ffcc00" : "#444444";
+        ctx.fillRect(505, 270, 230, 35);
+        drawText("BUY SPEED CORE (" + upgradeCost + " $AND)", 11, "#000000", 518, 292, true);
+
+        ctx.fillStyle = "#0d0d11"; ctx.fillRect(220, 345, 530, 180);
+        drawText(":: LOG DATA GRAPHICS SYSTEM TUNING CYCLES ::", 11, "#447766", 235, 370, false);
+        for(let g = 0; g < 10; g++) {
+            let h = Math.sin((andCoins * 3) + g) * 25 + 45;
+            ctx.fillStyle = "#00ffcc";
+            ctx.fillRect(255 + (g * 45), 500 - h, 18, h);
         }
-    </style>
-</head>
-<body>
+        
+        drawText("Press 'D' to return back to desktop launcher panel.", 12, "#a0a0a5", 210, 560, false);
+    }
+    else if (currentPhase === "Recovery") {
+        ctx.fillStyle = "#140e0a";
+        ctx.fillRect(190, 60, 590, 520);
+        ctx.fillStyle = "#ff9500";
+        ctx.fillRect(190, 60, 590, 30);
+        drawText("Andland Security Recovery Console OS", 14, "#000000", 205, 80, true);
+        
+        drawText("SYSTEM FAILURE MITIGATION MANAGEMENT LAYER", 15, "#ff9500", 210, 140, true);
+        drawText("Executing a clean flash clear wipes variable fields, clears name registries,", 12, "#f0f0f5", 210, 180, false);
+        drawText("zeroes out active coin counts, and flushes host storage cache profiles.", 12, "#f0f0f5", 210, 200, false);
 
-    <div id="terminal-header">
-        <h1>ANDLAND OPERATING SYSTEM</h1>
-        <p>Core Display Monitor Simulation Sandbox Frame Link</p>
-    </div>
+        ctx.fillStyle = "#ff453a";
+        ctx.fillRect(210, 240, 340, 50);
+        drawText("🔥 EXECUTE HARD SYSTEM FACTORY RESET", 13, "#ffffff", 230, 271, true);
 
-    <canvas id="andlandScreen" width="800" height="600"></canvas>
+        drawText("Press 'D' to safely return to operational build desktop.", 12, "#a0a0a5", 205, 560, false);
+    }
+    else if (currentPhase === "Shutdown") {
+        ctx.fillStyle = "#000000";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        drawText("Shutting down Andland OS safely...", 20, "#ff453a", 270, 260, true);
+        setTimeout(function() {
+            isSystemOn = false;
+            render();
+        }, 2000);
+    }
+}
 
-    <script>
-        const canvas = document.getElementById('andlandScreen');
-        const ctx = canvas.getContext('2d');
+function executeTerminalCommand(cmd) {
+    let clearCmd = cmd.trim().toLowerCase();
+    termLogs.push(username.toLowerCase() + "@andland_vm:~$ " + cmd);
 
-        const VERSION = "v1.4-stable";
-        let currentPhase = "Booting"; 
-        let bootStep = 0;
-        let isSystemOn = true;
-        let typedPassword = "";
-        let loginError = false;
+    if (clearCmd === "help") {
+        termLogs.push(" Available Architecture Commands:");
+        termLogs.push("  help     - Display operational directory guidelines.");
+        termLogs.push("  neofetch - Pull host emulator architecture build logs.");
+        termLogs.push("  clear    - Flush terminal console matrix.");
+    } else if (clearCmd === "neofetch") {
+        termLogs.push(" OS: Andland OS " + VERSION);
+        termLogs.push(" Decrypted ID: " + username);
+        termLogs.push(" System Sandbox: Intel Core i9 Processing Matrix");
+        termLogs.push(" Compositor protocol layer: Wayland Server Link Engine");
+        termLogs.push(" Root Access: DECRYPTED/FULL PRIVILEGE");
+    } else if (clearCmd === "clear") {
+        termLogs = [];
+    } else {
+        termLogs.push(" Error: Command '" + cmd + "' not found in secure sub-bins.");
+    }
+    termLogs.push(""); 
+}
 
-        // --- WALLPAPER ENGINE STATES ---
-        let wallpaperMode = localStorage.getItem("and_wp_mode") || "matrix"; // "matrix" or "image"
-        let wallpaperURL = localStorage.getItem("and_wp_url") || "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=800&auto=format&fit=crop"; 
+const bootTimer = setInterval(function() {
+    if (bootStep < bootLogs.length - 1) {
+        bootStep++;
+        render();
+    } else {
+        clearInterval(bootTimer);
+        currentPhase = "Locked"; 
+        render();
+    }
+}, 700);
 
-        let bgImage = new Image();
-        bgImage.src = wallpaperURL;
-        let isChangingWallpaperURL = false;
+window.addEventListener('keydown', function(e) {
+    if (!isSystemOn) return;
 
-        // --- DYNAMIC LOAD / DEFAULT SAVE ENGINE VARIABLES ---
-        let username = localStorage.getItem("and_user") || "User";
-        let correctPassword = localStorage.getItem("and_pwd") || "1234";
-        let themeColor = localStorage.getItem("and_theme") || "#007aff";
+    if (isChangingName || isChangingPassword) {
+        if (e.key === "Enter") {
+            if (inputBuffer.trim() !== "") {
+                if (isChangingName) username = inputBuffer.trim();
+                if (isChangingPassword) correctPassword = inputBuffer.trim();
+                saveSystemState();
+            }
+            isChangingName = false;
+            isChangingPassword = false;
+            inputBuffer = "";
+        } else if (e.key === "Backspace") {
+            inputBuffer = inputBuffer.slice(0, -1);
+        } else if (e.key.length === 1) {
+            if (inputBuffer.length < 15) inputBuffer += e.key;
+        }
+        render();
+        return;
+    }
 
-        let isGameInstalled = localStorage.getItem("and_installed") === "true";
-        let andCoins = parseFloat(localStorage.getItem("and_coins")) || 0;
-        let clickPower = parseFloat(localStorage.getItem("and_power")) || 0.25;
-        let upgradeCost = parseFloat(localStorage.getItem("and_cost")) || 10.0;
+    if (currentPhase !== "Locked" && currentPhase !== "Terminal") {
+        const key = e.key.toUpperCase();
+        if (key === '1') { currentPhase = "Terminal"; render(); return; }
+        if (key === '2') { currentPhase = "Settings"; render(); return; }
+        if (key === '3') { currentPhase = "Files"; render(); return; }
+        if (key === '4') { currentPhase = "AndStore"; render(); return; }
+        if (key === '5') { currentPhase = "Recovery"; render(); return; }
+        if (key === 'G' && isGameInstalled) { currentPhase = "Miner"; render(); return; }
+        if (key === 'D') { currentPhase = "Desktop"; render(); return; }
+    }
 
-        // System Input Modifiers
-        let isChangingPassword = false;
-        let isChangingName = false;
-        let inputBuffer = "";
-
-        // Terminal States
-        let termInput = "";
-        let termLogs = [
-          "Andland Core Execution Environment Loaded.",
-          "Type 'help' for a list of security commands.",
-          ""
-        ];
-
-        const bootLogs = [
-            "[ OK ] Loading Andland Bios Subsystems...",
-            "[ OK ] Mounting Virtual Root Directories...",
-            "[ OK ] Pulling local storage manifest data profiles...",
-            "[WARN] Kernel state: EXPERIMENTAL BUILD v1.4",
-            "ANDLAND OS SECURE KERNEL LOADED CORE COMPONENT."
-        ];
-
-        let icons = [
-            { name: "Console",   x: 220, y: 120, w: 80, h: 80, color: "#39ff14", app: "Terminal" },
-            { name: "Settings",  x: 340, y: 120, w: 80, h: 80, color: "#007aff", app: "Settings" },
-            { name: "Files",     x: 460, y: 120, w: 80, h: 80, color: "#ffcc00", app: "Files" },
-            { name: "AndStore",  x: 580, y: 120, w: 80, h: 80, color: "#ac39ff", app: "AndStore" },
-            { name: "Recovery",  x: 220, y: 240, w: 80, h: 80, color: "#ff9500", app: "Recovery" },
-            { name: "Lock Screen",x: 340, y: 240, w: 80, h: 80, color: "#e0e0e5", app: "LockToggle" },
-            { name: "Reset System",x: 460, y: 240, w: 80, h: 80, color: "#ff453a", app: "DirectReset" },
-            { name: "Power Off", x: 580, y: 240, w: 80, h: 80, color: "#707075", app: "Shutdown" }
-        ];
-
-        if (isGameInstalled) {
-            if(!icons.some(i => i.app === "Miner")) {
-                icons.push({ name: "CoinMiner", x: 220, y: 360, w: 80, h: 80, color: "#00ffcc", app: "Miner" });
+    if (currentPhase === "Locked") {
+        loginError = false; 
+        if (e.key.length === 1) { 
+            if (typedPassword.length < 12) typedPassword += e.key;
+        } 
+        else if (e.key === "Backspace") {
+            typedPassword = typedPassword.slice(0, -1);
+        } 
+        else if (e.key === "Enter") {
+            if (typedPassword === correctPassword) {
+                currentPhase = "Desktop"; 
+                typedPassword = "";
+            } else {
+                typedPassword = "";
+                loginError = true;
             }
         }
+        render();
+        return;
+    }
 
-        function saveSystemState() {
-            localStorage.setItem("and_user", username);
-            localStorage.setItem("and_pwd", correctPassword);
-            localStorage.setItem("and_theme", themeColor);
-            localStorage.setItem("and_installed", isGameInstalled);
-            localStorage.setItem("and_coins", andCoins);
-            localStorage.setItem("and_power", clickPower);
-            localStorage.setItem("and_cost", upgradeCost);
-            localStorage.setItem("and_wp_mode", wallpaperMode);
-            localStorage.setItem("and_wp_url", wallpaperURL);
+    if (currentPhase === "Terminal") {
+        if (e.key === "Enter") {
+            executeTerminalCommand(termInput);
+            termInput = "";
+        } else if (e.key === "Backspace") {
+            termInput = termInput.slice(0, -1);
+        } else if (e.key === "Escape") {
+            currentPhase = "Desktop";
+        } else if (e.key.length === 1) {
+            termInput += e.key;
+        }
+        render();
+        return;
+    }
+});
+
+canvas.addEventListener('click', function(e) {
+    if (currentPhase === "Booting" || !isSystemOn) return;
+    const rect = canvas.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+
+    if (currentPhase === "Locked") return;
+
+    if (mouseX >= 20 && mouseX <= 160 && mouseY >= 520 && mouseY <= 555) {
+        currentPhase = "Shutdown"; render(); return;
+    }
+
+    if (currentPhase === "Desktop") {
+        icons.forEach(function(icon) {
+            if (mouseX >= icon.x && mouseX <= (icon.x + icon.w) &&
+                mouseY >= icon.y && mouseY <= (icon.y + icon.h)) {
+                if(icon.app === "LockToggle") {
+                    currentPhase = "Locked";
+                } else if (icon.app === "DirectReset") {
+                    // Triggers immediate wipe directly from Desktop
+                    triggerFactoryReset();
+                } else {
+                    currentPhase = icon.app;
+                }
+                render();
+            }
+        });
+    }
+
+    if (currentPhase === "Settings") {
+        if (mouseX >= 520 && mouseX <= 620 && mouseY >= 145 && mouseY <= 175) {
+            isChangingName = true; isChangingPassword = false; inputBuffer = ""; render(); return;
+        }
+        if (mouseX >= 635 && mouseX <= 745 && mouseY >= 145 && mouseY <= 175) {
+            isChangingPassword = true; isChangingName = false; inputBuffer = ""; render(); return;
         }
 
-        function triggerFactoryReset() {
-            currentPhase = "Booting";
-            bootStep = 0;
-            termLogs = ["Complete architecture firmware flash execution completed.", "All matrix structures wiped back to manufacturing limits.", ""];
-            
-            localStorage.clear();
-
-            username = "User";
-            correctPassword = "1234";
-            themeColor = "#007aff";
-            wallpaperMode = "matrix";
-            wallpaperURL = "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=800&auto=format&fit=crop";
-            bgImage.src = wallpaperURL;
-            isGameInstalled = false;
-            andCoins = 0;
-            clickPower = 0.25;
-            upgradeCost = 10.0;
-            icons = [
-                { name: "Console",   x: 220, y: 120, w: 80, h: 80, color: "#39ff14", app: "Terminal" },
-                { name: "Settings",  x: 340, y: 120, w: 80, h: 80, color: "#007aff", app: "Settings" },
-                { name: "Files",     x: 460, y: 120, w: 80, h: 80, color: "#ffcc00", app: "Files" },
-                { name: "AndStore",  x: 580, y: 120, w: 80, h: 80, color: "#ac39ff", app: "AndStore" },
-                { name: "Recovery",  x: 220, y: 240, w: 80, h: 80, color: "#ff9500", app: "Recovery" },
-                { name: "Lock Screen",x: 340, y: 240, w: 80, h: 80, color: "#e0e0e5", app: "LockToggle" },
-                { name: "Reset System",x: 460, y: 240, w: 80, h: 80, color: "#ff453a", app: "DirectReset" },
-                { name: "Power Off", x: 580, y: 240, w: 80, h: 80, color: "#707075", app: "Shutdown" }
-            ];
-            
-            const recoveryTimer = setInterval(function() {
-                if (bootStep < bootLogs.length - 1) {
-                    bootStep++; render();
-                } else {
-                    clearInterval(recoveryTimer);
-                    currentPhase = "Locked"; render();
-                }
-            }, 500);
+        if (mouseY >= 308 && mouseY <= 338) {
+            if (mouseX >= 225 && mouseX <= 275) themeColor = "#007aff"; 
+            if (mouseX >= 295 && mouseX <= 345) themeColor = "#39ff14"; 
+            if (mouseX >= 365 && mouseX <= 415) themeColor = "#ff453a"; 
+            if (mouseX >= 435 && mouseX <= 485) themeColor = "#ac39ff"; 
+            if (mouseX >= 505 && mouseX <= 555) themeColor = "#ff9500"; 
+            saveSystemState();
             render();
         }
+    }
 
-        function drawText(text, size, color, x, y, bold) {
-            ctx.fillStyle = color;
-            ctx.font = (bold ? "bold " : "") + size + "px monospace";
-            ctx.fillText(text, x, y);
-        }
-
-        function drawMatrixWallpaper() {
-            ctx.fillStyle = "#0c0c12";
-            ctx.fillRect(190, 40, 610, 560);
-            
-            ctx.strokeStyle = "rgba(0, 122, 255, 0.06)";
-            ctx.lineWidth = 1;
-            
-            for (let x = 190; x < canvas.width; x += 30) {
-                ctx.beginPath(); ctx.moveTo(x, 40); ctx.lineTo(x, canvas.height); ctx.stroke();
-            }
-            for (let y = 40; y < canvas.height; y += 30) {
-                ctx.beginPath(); ctx.moveTo(190, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+    if (currentPhase === "AndStore") {
+        if (mouseX >= 610 && mouseX <= 720 && mouseY >= 185 && mouseY <= 225) {
+            if (!isGameInstalled) {
+                isGameInstalled = true;
+                if(!icons.some(i => i.app === "Miner")) {
+                    icons.push({ name: "CoinMiner", x: 220, y: 360, w: 80, h: 80, color: "#00ffcc", app: "Miner" });
+                }
+                saveSystemState();
+                render();
             }
         }
+    }
 
-        function render() {
-            if (!isSystemOn) {
-                ctx.fillStyle = "#000000";
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-                return;
-            }
-
-            ctx.fillStyle = "#0d0d11";
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            canvas.style.boxShadow = "0 0 25px " + themeColor;
-
-            if (currentPhase === "Booting") {
-                for (let i = 0; i <= bootStep; i++) {
-                    let color = "#39ff14";
-                    if (bootLogs[i].includes("[WARN]")) color = "#ffcc00"; 
-                    drawText(bootLogs[i], 15, color, 50, 100 + (i * 35), false);
-                }
-                ctx.fillStyle = themeColor;
-                ctx.fillRect(50, 480, (bootStep + 1) * 130, 15);
-                return;
-            }
-
-            if (currentPhase === "Locked") {
-                ctx.fillStyle = "#1c1c22";
-                ctx.fillRect(150, 120, 500, 360);
-                
-                drawText("WELCOME, " + username.toUpperCase(), 26, themeColor, 210, 175, true);
-                drawText("Enter Secure Password to decrypt desktop Matrix:", 13, "#a0a0a5", 210, 220, false);
-                
-                ctx.fillStyle = "#000000";
-                ctx.fillRect(250, 260, 300, 45);
-                ctx.strokeStyle = loginError ? "#ff453a" : themeColor;
-                ctx.lineWidth = 2;
-                ctx.strokeRect(250, 260, 300, 45);
-                
-                let stars = "";
-                for(let i=0; i<typedPassword.length; i++) { stars += "*"; }
-                drawText(stars, 24, "#ffffff", 270, 293, false);
-                
-                if (loginError) {
-                    drawText("INCORRECT PHRASE - ATTEMPT BLOCKED", 12, "#ff453a", 280, 335, true);
-                } else {
-                    drawText("Type password & press ENTER to load core link", 12, "#707075", 240, 335, false);
-                }
-                return;
-            }
-
-            if (currentPhase === "Desktop") {
-                if (wallpaperMode === "image" && bgImage.complete) {
-                    ctx.drawImage(bgImage, 190, 40, 610, 560);
-                } else {
-                    drawMatrixWallpaper();
-                }
-            }
-
-            ctx.fillStyle = "#1c1c22";
-            ctx.fillRect(0, 0, canvas.width, 40);
-            drawText("Andland OS", 14, themeColor, 20, 25, true);
-            drawText(VERSION, 12, "#ffcc00", 125, 25, false);
-            drawText("USER: " + username.toUpperCase(), 13, "#ffffff", 240, 25, true);
-            drawText("SYSTEM OPERATIONAL", 14, "#39ff14", 620, 25, false);
-
-            ctx.fillStyle = "#1c1c22";
-            ctx.fillRect(10, 60, 160, 520);
-            drawText("CORE SYSTEM", 12, "#a0a0a5", 25, 90, true);
-            drawText("[D] Desktop Panel", 14, "#f0f0f5", 25, 130, false);
-            drawText("[1] Terminal", 14, "#39ff14", 25, 160, false);
-            drawText("[2] Settings", 14, themeColor, 25, 190, false);
-            drawText("[3] Files", 14, "#ffcc00", 25, 220, false);
-            drawText("[4] AndStore", 14, "#ac39ff", 25, 250, false);
-            drawText("[5] Recovery", 14, "#ff9500", 25, 280, false);
-            if (isGameInstalled) {
-                drawText("[G] AndCoin Miner", 14, "#00ffcc", 25, 310, false);
-            }
-            
-            ctx.fillStyle = "#ff453a";
-            ctx.fillRect(20, 520, 140, 35);
-            drawText("SHUTDOWN", 12, "#ffffff", 50, 542, true);
-
-            if (currentPhase === "Desktop") {
-                drawText("Welcome Back, " + username, 24, "#f0f0f5", 220, 80, true);
-                
-                icons.forEach(function(icon) {
-                    ctx.fillStyle = "rgba(28, 28, 34, 0.85)";
-                    ctx.fillRect(icon.x, icon.y, icon.w, icon.h);
-                    ctx.fillStyle = icon.app === "Settings" ? themeColor : icon.color;
-                    ctx.fillRect(icon.x, icon.y + 70, icon.w, 10);
-                    drawText(icon.name, 11, "#f0f0f5", icon.x + 4, icon.y + 40, false);
-                });
-            } 
-            else if (currentPhase === "Terminal") {
-                ctx.fillStyle = "#000000";
-                ctx.fillRect(190, 60, 590, 520);
-                ctx.fillStyle = "#34343d";
-                ctx.fillRect(190, 60, 590, 30);
-                drawText("Andland Terminal Core Interoperability", 14, "#39ff14", 205, 80, true);
-                
-                let startY = 120;
-                let maxLogs = 18;
-                let linesToShow = termLogs.slice(-maxLogs);
-                linesToShow.forEach((log, index) => {
-                    drawText(log, 14, "#39ff14", 205, startY + (index * 22), false);
-                });
-
-                let promptY = startY + (linesToShow.length * 22);
-                if (promptY > 540) promptY = 540;
-                drawText(username.toLowerCase() + "@andland_vm:~$ " + termInput + "_", 14, "#ffffff", 205, promptY, false);
-                drawText("Press 'ESC' to drop out back to desktop panel.", 12, "#a0a0a5", 205, 560, false);
-            } 
-            else if (currentPhase === "Settings") {
-                ctx.fillStyle = "#15151a";
-                ctx.fillRect(190, 60, 590, 520);
-                ctx.fillStyle = "#1c1c22";
-                ctx.fillRect(190, 60, 590, 45);
-                drawText("Control Panel Customization Tweaker", 18, "#ffffff", 210, 88, true);
-                
-                ctx.fillStyle = "#1c1c22"; ctx.fillRect(210, 115, 550, 105);
-                drawText("ACCOUNT MANIFEST PROFILES", 12, "#ffcc00", 225, 135, true);
-                drawText("Current Username: " + username, 14, "#f0f0f5", 225, 160, false);
-                drawText("Security Key:     " + correctPassword, 14, "#f0f0f5", 225, 180, false);
-                
-                ctx.fillStyle = themeColor; ctx.fillRect(520, 140, 100, 30);
-                drawText("[EDIT NAME]", 11, "#ffffff", 535, 159, true);
-                ctx.fillStyle = themeColor; ctx.fillRect(635, 140, 110, 30);
-                drawText("[EDIT PWD]", 11, "#ffffff", 655, 159, true);
-
-                ctx.fillStyle = "#1c1c22"; ctx.fillRect(210, 230, 550, 100);
-                drawText("UI THEME GRAPHICS ENGINE", 12, "#007aff", 225, 250, true);
-                drawText("Click any block to route engine framework layout accenting colors:", 11, "#a0a0a5", 225, 272, false);
-                ctx.fillStyle = "#007aff"; ctx.fillRect(225, 287, 50, 30); 
-                ctx.fillStyle = "#39ff14"; ctx.fillRect(295, 287, 50, 30); 
-                ctx.fillStyle = "#ff453a"; ctx.fillRect(365, 287, 50, 30); 
-                ctx.fillStyle = "#ac39ff"; ctx.fillRect(435, 287, 50, 30); 
-                ctx.fillStyle = "#ff9500"; ctx.fillRect(505, 287, 50, 30); 
-
-                ctx.fillStyle = "#1c1c22"; ctx.fillRect(210, 340, 550, 150);
-                drawText("WALLPAPER ARCHITECTURE CONFIGURATION", 12, "#ac39ff", 225, 360, true);
-                
-                ctx.fillStyle = (wallpaperMode === "matrix") ? themeColor : "#44444a";
-                ctx.fillRect(225, 375, 140, 30);
-                drawText("[A] MATRIX GRID", 11, "#ffffff", 245, 394, true);
-
-                ctx.fillStyle = (wallpaperMode === "image") ? themeColor : "#44444a";
-                ctx.fillRect(380, 375, 140, 30);
-                drawText("[B] WEB IMAGE", 11, "#ffffff", 405, 394, true);
-
-                ctx.fillStyle = "#000000"; ctx.fillRect(225, 415, 520, 30);
-                ctx.strokeStyle = isChangingWallpaperURL ? "#39ff14" : "#44444a";
-                ctx.strokeRect(225, 415, 520, 30);
-                
-                let printURL = wallpaperURL;
-                if (printURL.length > 55) printURL = printURL.substring(0, 52) + "...";
-                drawText(isChangingWallpaperURL ? inputBuffer + "_" : "LINK: " + printURL, 11, "#39ff14", 235, 434, false);
-                drawText("Click box to insert background photo link URL. Press ENTER inside.", 10, "#707075", 225, 462, false);
-
-                if (isChangingName || isChangingPassword) {
-                    ctx.fillStyle = "#000000"; ctx.fillRect(210, 500, 550, 35);
-                    drawText("INPUT BUFFER STREAM ACTIVE: " + inputBuffer + "_", 13, "#39ff14", 225, 522, true);
-                }
-
-                drawText("Press 'D' to back out to apps grid panel.", 12, "#a0a0a5", 210, 560, false);
-            }
-            else if (currentPhase === "Files") {
-                ctx.fillStyle = "#000000";
-                ctx.fillRect(190, 60, 590, 520);
-                ctx.fillStyle = "#ffcc00";
-                ctx.fillRect(190, 60, 590, 30);
-                drawText("File Manager - Root Browser", 14, "#000000", 205, 80, true);
-                drawText("Directory: /root/desktop/", 14, "#a0a0a5", 205, 120, false);
-                drawText("[DIR]  system_apps/", 14, "#ffcc00", 220, 150, false);
-                drawText("[DIR]  developer_logs/", 14, "#ffcc00", 220, 175, false);
-                drawText("[FILE] andland_core.cfg", 14, "#ffffff", 220, 200, false);
-                drawText("Press 'D' to drop out to desktop.", 12, "#a0a0a5", 205, 560, false);
-            }
-            else if (currentPhase === "AndStore") {
-                ctx.fillStyle = "#0b0612";
-                ctx.fillRect(190, 60, 590, 520);
-                ctx.fillStyle = "#ac39ff";
-                ctx.fillRect(190, 60, 590, 30);
-                drawText("AndStore Repository Market", 14, "#ffffff", 205, 80, true);
-                
-                ctx.fillStyle = "#1c1c22"; ctx.fillRect(210, 160, 530, 90);
-                drawText("AndCoin Miner v1.4", 16, "#ffffff", 230, 195, true);
-                drawText("Clicker architecture tool built for stress testing performance.", 12, "#a0a0a5", 230, 220, false);
-                
-                if (!isGameInstalled) {
-                    ctx.fillStyle = "#39ff14"; ctx.fillRect(610, 185, 110, 40);
-                    drawText("[INSTALL]", 13, "#000000", 632, 210, true);
-                } else {
-                    ctx.fillStyle = "#555555"; ctx.fillRect(610, 185, 110, 40);
-                    drawText("[INSTALLED]", 13, "#ffffff", 625, 210, true);
-                }
-
-                drawText("Press 'D' to drop out to desktop.", 12, "#a0a0a5", 205, 560, false);
-            }
-            else if (currentPhase === "Miner") {
-                ctx.fillStyle = "#051410";
-                ctx.fillRect(190, 60, 590, 520);
-                ctx.fillStyle = "#00ffcc";
-                ctx.fillRect(190, 60, 590, 30);
-                drawText("AndCoin Miner Dashboard Engine", 14, "#000000", 205, 80, true);
-                
-                drawText("VIRTUAL ASSET WALLET BALANCE", 14, "#a0a0a5", 220, 120, false);
-                drawText(andCoins.toFixed(2) + " $AND", 36, "#00ffcc", 220, 165, true);
-                
-                ctx.fillStyle = "#1c1c22"; ctx.strokeStyle = "#00ffcc"; ctx.lineWidth = 2;
-                ctx.fillRect(220, 200, 250, 120); ctx.strokeRect(220, 200, 250, 120);
-                drawText("⛏️ TAP TO MINE", 18, "#ffffff", 270, 255, true);
-                drawText("Yield: +" + clickPower + " per strike", 12, "#a0a0a5", 260, 290, false);
-                
-                ctx.fillStyle = "#1c1c22"; ctx.strokeStyle = "#ffcc00";
-                ctx.fillRect(490, 200, 260, 120); ctx.strokeRect(490, 200, 260, 120);
-                drawText("🛒 HARDWARE TUNER UPGRADE", 13, "#ffcc00", 505, 225, true);
-                drawText("Current Power: +" + clickPower, 11, "#a0a0a5", 505, 250, false);
-                
-                ctx.fillStyle = andCoins >= upgradeCost ? "#ffcc00" : "#444444";
-                ctx.fillRect(505, 270, 230, 35);
-                drawText("BUY SPEED CORE (" + upgradeCost + " $AND)", 11, "#000000", 518, 292, true);
-
-                ctx.fillStyle = "#0d0d11"; ctx.fillRect(220, 345, 530, 180);
-                drawText(":: LOG DATA GRAPHICS SYSTEM TUNING CYCLES ::", 11, "#447766", 235, 370, false);
-                for(let g = 0; g < 10; g++) {
-                    let h = Math.sin((andCoins * 3) + g) * 25 + 45;
-                    ctx.fillStyle = "#00ffcc";
-                    ctx.fillRect(255 + (g * 45), 500 - h, 18, h);
-                }
-                
-                drawText("Press 'D' to return back to desktop launcher panel.", 12, "#a0a0a5", 210, 560, false);
-            }
-            else if (currentPhase === "Recovery") {
-                ctx.fillStyle = "#140e0a";
-                ctx.fillRect(190, 60, 590, 520);
-                ctx.fillStyle = "#ff9500";
-                ctx.fillRect(190, 60, 590, 30);
-                drawText("Andland Security Recovery Console OS", 14, "#000000", 205, 80, true);
-                
-                drawText("SYSTEM FAILURE MITIGATION MANAGEMENT LAYER", 15, "#ff9500", 210, 140, true);
-                drawText("Executing a clean flash clear wipes variable fields, clears name registries,", 12, "#f0f0f5", 210, 180, false);
-                drawText("zeroes out active coin counts, and flushes host storage cache profiles.", 12, "#f0f0f5", 210, 200, false);
-
-                ctx.fillStyle = "#ff453a";
-                ctx.fillRect(210, 240, 340, 50);
-                drawText("🔥 EXECUTE HARD SYSTEM FACTORY RESET", 13, "#ffffff", 230, 271, true);
-
-                drawText("Press 'D' to safely return to operational build desktop.", 12, "#a0a0a5", 205, 560, false);
-            }
-            else if (currentPhase === "Shutdown") {
-                ctx.fillStyle = "#000000";
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-                drawText("Shutting down Andland OS safely...", 20, "#ff453a", 270, 260, true);
-                setTimeout(function() {
-                    isSystemOn = false;
-                    render();
-                }, 2000);
+    if (currentPhase === "Miner") {
+        if (mouseX >= 220 && mouseX <= 470 && mouseY >= 200 && mouseY <= 320) {
+            andCoins += clickPower;
+            saveSystemState();
+            render();
+        }
+        if (mouseX >= 505 && mouseX <= 735 && mouseY >= 270 && mouseY <= 305) {
+            if (andCoins >= upgradeCost) {
+                andCoins -= upgradeCost;
+                clickPower += 0.25; 
+                upgradeCost = Math.round(upgradeCost * 1.5); 
+                saveSystemState();
+                render();
             }
         }
+    }
 
-        function executeTerminalCommand(cmd) {
-            let clearCmd = cmd.trim().toLowerCase();
-            termLogs.push(username.toLowerCase() + "@andland_vm:~$ " + cmd);
-
-            if (clearCmd === "help") {
-                termLogs.push(" Available Architecture Commands:");
-                termLogs.push("  help     - Display operational directory guidelines.");
-                termLogs.push("  neofetch - Pull host emulator architecture build logs.");
-                termLogs.push("  clear    - Flush terminal console matrix.");
-            } else if (clearCmd === "neofetch") {
-                termLogs.push(" OS: Andland OS " + VERSION);
-                termLogs.push(" Decrypted ID: " + username);
-                termLogs.push(" System Sandbox: Intel Core i9 Processing Matrix");
-                termLogs.push(" Compositor protocol layer: Wayland Server Link Engine");
-                termLogs.push(" Root Access: DECRYPTED/FULL PRIVILEGE");
-            } else if (clearCmd === "clear") {
-                termLogs = [];
-            } else {
-                termLogs.push(" Error: Command '" + cmd + "' not found in secure sub-bins.");
-            }
-            termLogs.push(""); 
+    if (currentPhase === "Recovery") {
+        if (mouseX >= 210 && mouseX <= 550 && mouseY >= 240 && mouseY <= 290) {
+            triggerFactoryReset();
         }
+    }
+});
 
-        const bootTimer = setInterval(function() {
-            if (bootStep < bootLogs.length - 1) {
-                bootStep++;
-                render();
-            } else {
-                clearInterval(bootTimer);
-                currentPhase = "Locked"; 
-                render();
-            }
-        }, 700);
-
-        bgImage.onload = function() {
-            if (currentPhase === "Desktop") render();
-        };
-
-        window.addEventListener('keydown', function(e) {
-            if (!isSystemOn) return;
-
-            if (isChangingName || isChangingPassword || isChangingWallpaperURL) {
-                if (e.key === "Enter") {
-                    if (inputBuffer.trim() !== "") {
-                        if (isChangingName) username = inputBuffer.trim();
-                        if (isChangingPassword) correctPassword = inputBuffer.trim();
-                        if (isChangingWallpaperURL) {
-                            wallpaperURL = inputBuffer.trim();
-                            bgImage.src = wallpaperURL;
-                        }
-                        saveSystemState();
-                    }
-                    isChangingName = false;
-                    isChangingPassword = false;
-                    isChangingWallpaperURL = false;
-                    inputBuffer = "";
-                } else if (e.key === "Backspace") {
-                    inputBuffer = inputBuffer.slice(0, -1);
-                } else if (e.key.length === 1) {
-                    if (inputBuffer.length < 200) inputBuffer += e.key;
-                }
-                render();
-                return;
-            }
-
-            if (currentPhase !== "Locked" && currentPhase !== "Terminal") {
-                const key = e.key.toUpperCase();
-                if (key === '1') { currentPhase = "Terminal"; render(); return; }
-                if (key === '2') { currentPhase = "Settings"; render(); return; }
-                if (key === '3') { currentPhase = "Files"; render(); return; }
-                if (key === '4') { currentPhase = "AndStore"; render(); return; }
-                if (key === '5') { currentPhase = "Recovery"; render(); return; }
-                if (key === 'G' && isGameInstalled) { currentPhase = "Miner"; render(); return; }
-                if (key === 'D') { currentPhase = "Desktop"; render(); return; }
-            }
-
-            if (currentPhase === "Locked") {
-                loginError = false; 
-                if (e.key.length === 1) { 
-                    if (typedPassword.length < 12) typedPassword += e.key;
-                } 
-                else if (e.key === "Backspace") {
-                    typedPassword = typedPassword.slice(0, -1);
-                } 
-                else if (e.key === "Enter") {
-                    if (typedPassword === correctPassword) {
-                        currentPhase = "Desktop"; 
-                        typedPassword = "";
-                    } else {
-                        typedPassword = "";
-                        loginError = true;
-                    }
-                }
-                render();
-                return;
-            }
-
-            if (currentPhase === "Terminal") {
-                if (e.key === "Enter") {
-                    executeTerminalCommand(termInput);
-                    termInput = "";
-                } else if (e.key === "Backspace") {
-                    termInput = termInput.slice(0, -1);
-                } else if (e.key === "Escape") {
-                    currentPhase = "Desktop";
-                } else if (e.key.length === 1) {
-                    termInput += e.key;
-                }
-                render();
-                return;
-            }
-        });
-
-        canvas.addEventListener('click', function(e) {
-            if (currentPhase === "Booting" || !isSystemOn) return;
-            const rect = canvas.getBoundingClientRect();
-            const mouseX = e.clientX - rect.left;
-            const mouseY = e.clientY - rect.top;
-
-            if (currentPhase === "Locked") return;
-
-            if (mouseX >= 20 && mouseX <= 160 && mouseY >= 520 && mouseY <= 555) {
-                currentPhase = "Shutdown"; render(); return;
-            }
-
-            if (currentPhase === "Desktop") {
-                icons.forEach(function(icon) {
-                    if (mouseX >= icon.x && mouseX <= (icon.x + icon.w) &&
-                        mouseY >= icon.y && mouseY <= (icon.y + icon.h)) {
-                        if(icon.app === "LockToggle") {
-                            currentPhase = "Locked";
-                        } else if (icon.app === "DirectReset") {
-                            triggerFactoryReset();
-                        } else {
-                            currentPhase = icon.app;
-                        }
-                        render();
-                    }
-                });
-            }
-
-            if (currentPhase === "Settings") {
-                if (mouseX >= 520 && mouseX <= 620 && mouseY >= 140 && mouseY <= 170) {
-                    isChangingName = true; isChangingPassword = false; isChangingWallpaperURL = false; inputBuffer = ""; render(); return;
-                }
-                if (mouseX >= 635 && mouseX <= 745 && mouseY >= 140 && mouseY <= 170) {
-                    isChangingPassword = true; isChangingName = false; isChangingWallpaperURL = false; inputBuffer = ""; render(); return;
-                }
-
-                if (mouseY >= 287 && mouseY <= 317) {
-                    if (mouseX >= 225 && mouseX <= 275) themeColor = "#007aff"; 
-                    if (mouseX >= 295 && mouseX <= 345) themeColor = "#39ff14"; 
-                    if (mouseX >= 365 && mouseX <= 415) themeColor = "#ff453a"; 
-                    if (mouseX >= 435 && mouseX <= 485) themeColor = "#ac39ff"; 
-                    if (mouseX >= 505 && mouseX <= 555) themeColor = "#ff9500"; 
-                    saveSystemState();
-                    render();
-                }
-
-                if (mouseY >= 375 && mouseY <= 405) {
-                    if (mouseX >= 225 && mouseX <= 365) {
-                        wallpaperMode = "matrix";
-                        saveSystemState();
-                        render();
-                    }
-                    if (mouseX >= 380 && mouseX <= 520) {
-                        wallpaperMode = "image";
-                        saveSystemState();
-                        render();
-                    }
-                }
-
-                if (mouseX >= 225 && mouseX <= 745 && mouseY >= 415 && mouseY <= 445) {
-                    isChangingWallpaperURL = true; isChangingName = false; isChangingPassword = false; inputBuffer = ""; render(); return;
-                }
-            }
-
-            if (currentPhase === "AndStore") {
-                if (mouseX >= 610 && mouseX <= 720 && mouseY >= 185 && mouseY <= 225) {
-                    if (!isGameInstalled) {
-                        isGameInstalled = true;
-                        if(!icons.some(i => i.app === "Miner")) {
-                            icons.push({ name: "CoinMiner", x: 220, y: 360, w: 80, h: 80, color: "#00ffcc", app: "Miner" });
-                        }
-                        saveSystemState();
-                        render();
-                    }
-                }
-            }
-
-            if (currentPhase === "Miner") {
-                if (mouseX >= 220 && mouseX <= 470 && mouseY >= 200 && mouseY <= 320) {
-                    andCoins += clickPower;
-                    saveSystemState();
-                    render();
-                }
-                if (mouseX >= 505 && mouseX <= 735 && mouseY >= 270 && mouseY <= 305) {
-                    if (andCoins >= upgradeCost) {
-                        andCoins -= upgradeCost;
-                        clickPower += 0.25; 
-                        upgradeCost = Math.round(upgradeCost * 1.5); 
-                        saveSystemState();
-                        render();
-                    }
-                }
-            }
-
-            if (currentPhase === "Recovery") {
-                if (mouseX >= 210 && mouseX <= 550 && mouseY >= 240 && mouseY <= 290) {
-                    triggerFactoryReset();
-                }
-            }
-        });
-
-        render();
-    </script>
-</body>
-</html>
+render();
