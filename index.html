@@ -11,7 +11,6 @@
 </style>
 
 <script>
-// Force the engine to wait until the browser frame is fully constructed
 window.onload = function() {
   const canvas = document.getElementById('aosScreen');
   if (!canvas) return;
@@ -53,7 +52,6 @@ window.onload = function() {
           return;
       }
 
-      // Explicitly draw the dark display panel base background inside the script loop
       ctx.fillStyle = "#0d0d11";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -71,7 +69,7 @@ window.onload = function() {
       if (currentPhase === "Locked") {
           ctx.fillStyle = "#1c1c22";
           ctx.fillRect(150, 130, 500, 340);
-          drawText("ANDLAND OS LOCK", 30, "#007aff", 260, 180, true);
+          drawText("ANDLAND OS LOCK", 30, "#007aff", 210, 180, true);
           drawText("Enter User Password to decrypt desktop:", 14, "#a0a0a5", 230, 230, false);
           
           ctx.fillStyle = "#000000";
@@ -92,12 +90,14 @@ window.onload = function() {
           return;
       }
 
+      // Top Taskbar
       ctx.fillStyle = "#1c1c22";
       ctx.fillRect(0, 0, canvas.width, 40);
       drawText("Andland OS", 14, "#007aff", 20, 25, true);
       drawText(VERSION, 12, "#ffcc00", 125, 25, false);
       drawText("SYSTEM OK", 14, "#39ff14", 680, 25, false);
 
+      // Sidebar Panel
       ctx.fillStyle = "#1c1c22";
       ctx.fillRect(10, 60, 160, 520);
       drawText("CORE SYSTEM", 12, "#a0a0a5", 25, 90, true);
@@ -151,99 +151,4 @@ window.onload = function() {
           ctx.fillStyle = "#1c1c22";
           ctx.fillRect(210, 255, 550, 105);
           drawText("SYSTEM ENV VARIABLES", 12, "#007aff", 225, 275, true);
-          drawText("Display Target: GitHub Pages Host Layer", 14, "#f0f0f5", 225, 300, false);
-          drawText("Graphics Engine: Wayland Matrix Driver", 14, "#f0f0f5", 225, 320, false);
-          drawText("Root Access Level: DECRYPTED/FULL SYSTEM", 14, "#39ff14", 225, 340, false);
-          
-          drawText("Press 'D' to back out to apps grid panel.", 12, "#a0a0a5", 210, 560, false);
-      }
-      else if (currentPhase === "Files") {
-          ctx.fillStyle = "#000000";
-          ctx.fillRect(190, 60, 590, 520);
-          ctx.fillStyle = "#ffcc00";
-          ctx.fillRect(190, 60, 590, 30);
-          drawText("File Manager - Root Browser", 14, "#000000", 205, 80, true);
-          drawText("Directory: /root/desktop/", 14, "#a0a0a5", 205, 120, false);
-          drawText("[DIR]  system_apps/", 14, "#ffcc00", 220, 150, false);
-          drawText("[DIR]  developer_logs/", 14, "#ffcc00", 220, 175, false);
-          drawText("[FILE] andland_core.cfg", 14, "#ffffff", 220, 200, false);
-          drawText("Press 'D' to drop out to desktop.", 12, "#a0a0a5", 205, 560, false);
-      }
-      else if (currentPhase === "Shutdown") {
-          ctx.fillStyle = "#000000";
-          ctx.fillRect(0, 0, canvas.width, canvas.height);
-          drawText("Shutting down Andland OS safely...", 20, "#ff453a", 270, 260, true);
-          setTimeout(function() {
-              isSystemOn = false;
-              render();
-          }, 2000);
-      }
-  }
-
-  const bootTimer = setInterval(function() {
-      if (bootStep < bootLogs.length - 1) {
-          bootStep++;
-          render();
-      } else {
-          clearInterval(bootTimer);
-          currentPhase = "Locked"; 
-          render();
-      }
-  }, 700);
-
-  window.addEventListener('keydown', function(e) {
-      if (!isSystemOn) return;
-      if (currentPhase === "Locked") {
-          loginError = false; 
-          if (e.key >= "0" && e.key <= "9") {
-              if (typedPassword.length < 6) typedPassword += e.key;
-          } 
-          else if (e.key === "Backspace") {
-              typedPassword = typedPassword.slice(0, -1);
-          } 
-          else if (e.key === "Enter") {
-              if (typedPassword === correctPassword) {
-                  currentPhase = "Desktop"; 
-                  typedPassword = "";
-              } else {
-                  typedPassword = "";
-                  loginError = true;
-              }
-          }
-          render();
-          return;
-      }
-      const key = e.key.toUpperCase();
-      if (key === '1') currentPhase = "Terminal";
-      if (key === '2') currentPhase = "Settings";
-      if (key === '3') currentPhase = "Files";
-      if (key === 'D') currentPhase = "Desktop";
-      render();
-  });
-
-  canvas.addEventListener('click', function(e) {
-      if (currentPhase === "Booting" || currentPhase === "Locked" || !isSystemOn) return;
-      const rect = canvas.getBoundingClientRect();
-      const mouseX = e.clientX - rect.left;
-      const mouseY = e.clientY - rect.top;
-
-      if (mouseX >= 20 && mouseX <= 160 && mouseY >= 520 && mouseY <= 555) {
-          currentPhase = "Shutdown";
-          render();
-          return;
-      }
-
-      if (currentPhase === "Desktop") {
-          icons.forEach(function(icon) {
-              if (mouseX >= icon.x && mouseX <= (icon.x + icon.w) &&
-                  mouseY >= icon.y && mouseY <= (icon.y + icon.h)) {
-                  currentPhase = icon.app;
-                  render();
-              }
-          });
-      }
-  });
-
-  render();
-};
-</script>
+          drawText("Display Target: GitHub Pages Host Layer", 14, "#f0f0f5", 2
