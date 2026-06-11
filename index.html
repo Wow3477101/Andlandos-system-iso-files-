@@ -12,7 +12,6 @@
 
 <script>
 window.onload = function() {
-  // FIXED LINE: This must match your new canvas ID exactly!
   const canvas = document.getElementById('andlandScreen');
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
@@ -168,33 +167,3 @@ window.onload = function() {
           drawText("[DIR]  system_apps/", 14, "#ffcc00", 220, 150, false);
           drawText("[DIR]  developer_logs/", 14, "#ffcc00", 220, 175, false);
           drawText("[FILE] andland_core.cfg", 14, "#ffffff", 220, 200, false);
-          drawText("Press 'D' to drop out to desktop.", 12, "#a0a0a5", 205, 560, false);
-      }
-      else if (currentPhase === "Shutdown") {
-          ctx.fillStyle = "#000000";
-          ctx.fillRect(0, 0, canvas.width, canvas.height);
-          drawText("Shutting down Andland OS safely...", 20, "#ff453a", 270, 260, true);
-          setTimeout(function() {
-              isSystemOn = false;
-              render();
-          }, 2000);
-      }
-  }
-
-  const bootTimer = setInterval(function() {
-      if (bootStep < bootLogs.length - 1) {
-          bootStep++;
-          render();
-      } else {
-          clearInterval(bootTimer);
-          currentPhase = "Locked"; 
-          render();
-      }
-  }, 700);
-
-  window.addEventListener('keydown', function(e) {
-      if (!isSystemOn) return;
-      if (currentPhase === "Locked") {
-          loginError = false; 
-          if (e.key >= "0" && e.key <= "9") {
-              if (typed
