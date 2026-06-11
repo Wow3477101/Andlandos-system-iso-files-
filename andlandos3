@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Andland OS v1.3 - Safe and Sound (Mobile Layout)</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background-color: #000000;
+            color: #ffffff;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+        canvas {
+            background-color: #000000;
+            border: 2px solid #222;
+            display: block;
+            border-radius: 24px; /* Curved phone border look */
+            box-shadow: 0 20px 40px rgba(0,0,0,0.8);
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="andlandScreen" width="800" height="600"></canvas>
+
+    <script>
+        const canvas = document.getElementById('andlandScreen');
+        const ctx = canvas.getContext('2d');
+        const VERSION = "v1.3-MobileSafe";
+        
+        let currentPhase = "Booting";
+        let bootStep = 0;
+        let typedPassword = "";
+        
+        // --- SECURE USER VARIABLES ---
+        let username = localStorage.getItem("and_user_v13") || "User";
+        let correctPassword = localStorage.getItem("and_pwd_v13") || "1234";
+        let themeColor = localStorage.getItem("and_theme_v13") || "#007aff"; // Default iOS Blue
+        
+        let isEditingName = false;
+        let isEditingPass = false;
+        let inputBuffer = "";
+
+        let termInput = "";
+        let termLogs = ["Andland Mobile UI Layer Active.", ""];
+
+        const bootLogs = [
+            "LOADING ANDLAND MOBILE OS SUBSYSTEMS...",
+            "[OK] COMPILING GRAPHIC UI LAYOUT CELLS",
+            "[OK] ENCRYPTING DATA ACCELERATION VAULT",
+            "[OK] MOBILE SYSTEM INTEGRITY: VERIFIED",
+            "BOOT COMPLETE. BOOTING INTO SMARTPHONE ENGINE..."
+        ];
+
+        function drawText(text, size, color, x, y, alignment = "left", bold = false) {
+            ctx.fillStyle = color;
+            ctx.font = (bold ? "bold " : "") + size + "px -apple-system, BlinkMacSystemFont, sans-serif";
+            ctx.textAlign = alignment;
+            ctx.fillText(text, x, y);
+        }
+
+        function render() {
+            ctx.textAlign = "left"; // Reset defaults
+            ctx.fillStyle = "#0a0a0c";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // 1. BOOT PHASE
+            if (currentPhase === "Booting") {
+                for (let i = 0; i <= bootStep; i++) {
+                    drawText(bootLogs[i], 15, "#39ff14", 60, 100 + (i * 35));
+                }
+                return;
+            }
+
+            // --- SMARTPHONE FRAME CONTAINER DESIGN ---
+            // Centered phone screen shape: x=240, y=30, width=320, height=540 (Perfect 9:16 mobile aspect)
+            const pX = 240, pY = 30, pW = 320, pH = 540;
+            
+            // Draw wallpaper background inside phone viewport
+            ctx.fillStyle = "#121214";
+            ctx.fillRect(pX, pY, pW, pH);
+
+            // 2. LOCK SCREEN PHASE
+            if (currentPhase === "Locked") {
+                // Top clock layout
+                drawText("12:00", 38, "#ffffff", pX + (pW/2), pY + 90, "center", false);
+                drawText("Andland Mobile Secure Node", 12, "rgba(255,255,255,0.6)", pX + (pW/2), pY + 120, "center");
+
+                // Lock Keypad UI Frame
+                ctx.fillStyle = "#1c1c1e";
+                ctx.fillRect(pX + 25, pY + 280, pW - 50, 44);
+                ctx.strokeStyle = themeColor;
+                ctx.lineWidth = 1.5;
+                ctx.strokeRect(pX + 25, pY + 280, pW - 50, 44);
+
+                let stars = "";
+                for(let i = 0; i < typedPassword.length; i++) stars += "●";
+                if (stars === "") {
+                    drawText("Enter Password Key", 14, "rgba(255,255,255,0.3)", pX + (
