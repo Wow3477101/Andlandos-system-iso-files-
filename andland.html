@@ -3,84 +3,216 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Andland OS v1.2-stable Core</title>
+    <title>Andland OS v1.2</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
-            background-color: #050508;
-            color: #ffffff;
+            background-color: #000000;
+            color: #39ff14;
             font-family: 'Courier New', Courier, monospace;
             display: flex;
             flex-direction: column;
-            justify-content: center;
             align-items: center;
+            justify-content: center;
             min-height: 100vh;
             overflow: hidden;
         }
-        #terminal-header { margin-bottom: 12px; text-align: center; }
-        #terminal-header h1 { font-size: 20px; color: #39ff14; letter-spacing: 2px; text-shadow: 0 0 8px rgba(57, 255, 20, 0.5); }
+        #title-bar {
+            width: 800px;
+            background-color: #111;
+            padding: 5px 10px;
+            border: 2px solid #333;
+            border-bottom: none;
+            display: flex;
+            justify-content: space-between;
+            font-size: 14px;
+        }
         canvas {
-            background-color: #0d0d11;
-            border: 2px solid #1c1c22;
-            border-radius: 8px;
+            background-color: #000000;
+            border: 2px solid #333;
             display: block;
-            cursor: pointer;
-            transition: box-shadow 0.3s ease;
         }
     </style>
 </head>
 <body>
-    <div id="terminal-header">
-        <h1>ANDLAND OPERATING SYSTEM</h1>
+
+    <div id="title-bar">
+        <span>Andland OS Core System</span>
+        <span style="color: #ffcc00;">v1.2-Classic</span>
     </div>
     <canvas id="andlandScreen" width="800" height="600"></canvas>
 
     <script>
         const canvas = document.getElementById('andlandScreen');
         const ctx = canvas.getContext('2d');
-        const VERSION = "v1.2-stable";
-        let currentPhase = "Booting"; 
+        const VERSION = "v1.2";
+        
+        let currentPhase = "Booting";
         let bootStep = 0;
-        let isSystemOn = true;
         let typedPassword = "";
-        let loginError = false;
-
-        // --- CORE MANIFEST LOG DATA VARIABLES ---
         let username = localStorage.getItem("and_user_v12") || "User";
         let correctPassword = localStorage.getItem("and_pwd_v12") || "1234";
-        const themeColor = "#39ff14"; // Fixed Classic Green Matrix
+        let termInput = "";
+        let termLogs = ["Andland Kernel Shell Active. Type 'help' for commands.", ""];
 
-        let isChangingPassword = false, isChangingName = false, inputBuffer = "", termInput = "";
-        let termLogs = ["Andland Matrix Core Loaded. Type 'help' for layout guidelines.", ""];
         const bootLogs = [
-            "[ OK ] Initializing Andland Kernel Core Subsystems...",
-            "[ OK ] Allocating Protected Memory Matrix sectors...",
-            "[ OK ] Verifying Local Storage Registry Profiles...",
-            "[WARN] Operating Environment Mode: SECURE ARCHITECTURE",
-            "ANDLAND COOPERATIVE EMULATOR MATRIX OPERATIONAL."
+            "STARTING ANDLAND BOOT SEQUENCE...",
+            "[OK] CORE MODULE DETECTED",
+            "[OK] LINKING WAYLAND DRIVERS",
+            "[OK] MEMORY ALLOCATION STABLE",
+            "SYSTEM READY. LOADING SECURITY LAYER..."
         ];
 
-        let icons = [
-            { name: "Console",   x: 220, y: 120, w: 80, h: 80, color: "#39ff14", app: "Terminal" },
-            { name: "Settings",  x: 340, y: 120, w: 80, h: 80, color: "#39ff14", app: "Settings" },
-            { name: "Files",     x: 460, y: 120, w: 80, h: 80, color: "#39ff14", app: "Files" },
-            { name: "Lock Screen",x: 580, y: 120, w: 80, h: 80, color: "#e0e0e5", app: "LockToggle" },
-            { name: "Power Off", x: 220, y: 240, w: 80, h: 80, color: "#707075", app: "Shutdown" }
-        ];
-
-        function saveSystemState() {
-            localStorage.setItem("and_user_v12", username);
-            localStorage.setItem("and_pwd_v12", correctPassword);
-        }
-
-        function drawText(text, size, color, x, y, bold) {
+        function drawText(text, color, x, y, size = 16) {
             ctx.fillStyle = color;
-            ctx.font = (bold ? "bold " : "") + size + "px monospace";
+            ctx.font = size + "px monospace";
             ctx.fillText(text, x, y);
         }
-        
-        function drawMatrixWallpaper() {
-            ctx.fillStyle = "#0c0c12"; ctx.fillRect(190, 40, 610, 560);
-            ctx.strokeStyle = "rgba(57, 255, 20, 0.05)"; ctx.lineWidth = 1;
-            for (let x = 190; x < canvas.width; x += 30) { ctx.beginPath(); ctx.moveTo(x, 40); ctx.lineTo(x, canvas.height); ctx.stroke(); }
-            for (let y = 40; y < canvas.height; y += 30) { ctx.beginPath(); ctx.moveTo(190, y); ctx.lineTo(canvas.width, y
+
+        function render() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 1. BOOT PHASE
+            if (currentPhase === "Booting") {
+                for (let i = 0; i <= bootStep; i++) {
+                    drawText(bootLogs[i], "#39ff14", 50, 80 + (i * 30));
+                }
+                return;
+            }
+
+            // 2. LOCK SCREEN PHASE
+            if (currentPhase === "Locked") {
+                drawText("=== ANDLAND SECURITY LOCK ===", "#39ff14", 250, 180);
+                drawText("USER: " + username.toUpperCase(), "#ffffff", 250, 220);
+                drawText("ENTER PASSWORD:", "#39ff14", 250, 270);
+                
+                // Password box border
+                ctx.strokeStyle = "#333";
+                ctx.strokeRect(250, 290, 300, 40);
+                
+                let stars = "";
+                for(let i = 0; i < typedPassword.length; i++) stars += "*";
+                drawText(stars + "_", "#ffffff", 260, 315, 20);
+                return;
+            }
+
+            // 3. DESKTOP ENVIRONMENT
+            if (currentPhase === "Desktop") {
+                drawText("=== MAIN DESKTOP ===", "#39ff14", 40, 50);
+                drawText("Welcome back, " + username, "#ffffff", 40, 90);
+                
+                drawText("[1] Open Terminal Shell", "#39ff14", 40, 160);
+                drawText("[2] System Configuration", "#39ff14", 40, 200);
+                drawText("[L] Lock Device", "#ff453a", 40, 240);
+                
+                // Classic Matrix Lines / Grid Effect
+                ctx.strokeStyle = "rgba(57, 255, 20, 0.03)";
+                for(let i = 0; i < canvas.width; i += 40) {
+                    ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, canvas.height); ctx.stroke();
+                }
+            }
+
+            // 4. TERMINAL SHELL
+            if (currentPhase === "Terminal") {
+                drawText("--- TERMINAL CONSOLE --- (Press ESC to Exit)", "#39ff14", 30, 40, 14);
+                
+                termLogs.slice(-20).forEach((log, idx) => {
+                    drawText(log, "#39ff14", 30, 80 + (idx * 22), 14);
+                });
+                
+                drawText(username.toLowerCase() + "@andland:~$ " + termInput + "_", "#ffffff", 30, 540, 14);
+            }
+
+            // 5. SETTINGS
+            if (currentPhase === "Settings") {
+                drawText("--- SYSTEM CONFIGURATION --- (Press ESC to Exit)", "#39ff14", 40, 50);
+                drawText("1. Change Username (Press U)", "#ffffff", 40, 120);
+                drawText("2. Change Password (Press P)", "#ffffff", 40, 160);
+                drawText("Current Config -> User: " + username + " | Pass: " + correctPassword, "#ffcc00", 40, 220, 14);
+            }
+        }
+
+        // Boot Timer Sequence
+        const bootInterval = setInterval(() => {
+            if (bootStep < bootLogs.length - 1) {
+                bootStep++;
+                render();
+            } else {
+                clearInterval(bootInterval);
+                currentPhase = "Locked";
+                render();
+            }
+        }, 700);
+
+        // Terminal Handler
+        function runCommand(cmd) {
+            let clean = cmd.trim().toLowerCase();
+            termLogs.push(username.toLowerCase() + "@andland:~$ " + cmd);
+            
+            if (clean === "help") {
+                termLogs.push(" Available tools: help, neofetch, clear");
+            } else if (clean === "neofetch") {
+                termLogs.push(" OS: Andland OS " + VERSION);
+                termLogs.push(" Kernel: Wayland-Link Alpha Engine");
+                termLogs.push(" Core: Intel Core i9 Emulation Layer");
+            } else if (clean === "clear") {
+                termLogs = [];
+            } else {
+                termLogs.push(" Unknown command sequence.");
+            }
+            termLogs.push("");
+        }
+
+        // Global Key Listeners
+        window.addEventListener('keydown', e => {
+            if (currentPhase === "Booting") return;
+
+            if (currentPhase === "Locked") {
+                if (e.key === "Enter") {
+                    if (typedPassword === correctPassword) {
+                        currentPhase = "Desktop";
+                        typedPassword = "";
+                    } else {
+                        typedPassword = "";
+                    }
+                } else if (e.key === "Backspace") {
+                    typedPassword = typedPassword.slice(0, -1);
+                } else if (e.key.length === 1) {
+                    typedPassword += e.key;
+                }
+                render();
+                return;
+            }
+
+            if (currentPhase === "Terminal") {
+                if (e.key === "Enter") {
+                    runCommand(termInput);
+                    termInput = "";
+                } else if (e.key === "Backspace") {
+                    termInput = termInput.slice(0, -1);
+                } else if (e.key === "Escape") {
+                    currentPhase = "Desktop";
+                } else if (e.key.length === 1) {
+                    termInput += e.key;
+                }
+                render();
+                return;
+            }
+
+            // Navigation choices from Desktop or Settings
+            if (e.key === "Escape") {
+                currentPhase = "Desktop";
+            } else if (e.key === "1") {
+                currentPhase = "Terminal";
+            } else if (e.key === "2") {
+                currentPhase = "Settings";
+            } else if (e.key.toLowerCase() === "l") {
+                currentPhase = "Locked";
+            }
+            render();
+        });
+
+        render();
+    </script>
+</body>
+</html>
