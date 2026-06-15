@@ -1,3 +1,7 @@
++500
+Lines changed: 500 additions & 0 deletions
+Original file line number	Diff line number	Diff line change
+@@ -0,0 +1,500 @@
 <style>
   body {
     margin: 0;
@@ -10,53 +14,42 @@
   }
   canvas {
     background-color: #0f0f12;
-    /* Updated border to blue */
-    border: 4px solid #007aff;
+    border: 4px solid #333;
     border-radius: 8px;
     box-shadow: 0 0 25px rgba(0, 122, 255, 0.4);
   }
 </style>
-
 <canvas id="andlandScreen" width="800" height="600"></canvas>
-
 <script>
   const canvas = document.getElementById('andlandScreen');
   const ctx = canvas.getContext('2d');
-
   // --- STORAGE MATRIX ---
   const defaultAccounts = [
       { user: "User", pass: "1234", theme: "#007aff" }, 
       { user: "Guest", pass: "", theme: "#ff453a" }    
   ];
-
   let accountsList = JSON.parse(localStorage.getItem('andland_accounts'));
   if (!accountsList || accountsList.length === 0) {
       accountsList = defaultAccounts;
       localStorage.setItem('andland_accounts', JSON.stringify(accountsList));
   }
-
   let selectedAccountIdx = parseInt(localStorage.getItem('andland_active_idx')) || 0;
   if (selectedAccountIdx >= accountsList.length) selectedAccountIdx = 0;
-
   let currentUsername = accountsList[selectedAccountIdx].user;
   let currentPassword = accountsList[selectedAccountIdx].pass;
   let currentThemeColor = accountsList[selectedAccountIdx].theme || "#007aff"; 
-
   let currentPhase = "Booting"; 
   let bootStep = 0;
   let isSystemOn = true;
   let typedPassword = "";
   let loginError = false;
-
   let changingUser = false;
   let changingPass = false;
   let addingNewAccount = false; 
   let inputBuffer = "";
-  let tempNewPass = "";         
-  let regStep = 0;              
-
+  let tempNewPass = "";        
+  let regStep = 0;             
   let shutdownLineCount = 0;
-
   const bootLogs = [
       "[ OK ] Loading AndlandOS Bios Subsystems...",
       "[ OK ] Mounting Virtual Root Directories...",
@@ -64,7 +57,6 @@
       "[ OK ] Generating Tiled Desktop Profiles Grid...",
       "ANDLANDOS KERNEL READY."
   ];
-
   const shutdownLogs = [
       "System is closing...",
       "[ INFO ] Unmounting /dev/sda1 secure blocks...",
@@ -78,26 +70,22 @@
       "Killing all remaining system processes... Halt.",
       "Powering down subsystem modules safely."
   ];
-
   const themes = [
       { name: "Blue",   color: "#007aff" },
       { name: "Red",    color: "#ff453a" },
       { name: "Yellow", color: "#ffcc00" },
       { name: "Green",  color: "#34c759" }
   ];
-
   const icons = [
       { name: "Console",  x: 220, y: 120, w: 80, h: 80, iconColor: "#39ff14", app: "Terminal" },
       { name: "Settings", x: 340, y: 120, w: 80, h: 80, iconColor: "#ffffff", app: "Settings" },
       { name: "Power Off",x: 460, y: 120, w: 80, h: 80, iconColor: "#ff453a", app: "Shutdown" }
   ];
-
   function drawText(text, size, color, x, y, bold) {
       ctx.fillStyle = color;
       ctx.font = (bold ? "bold " : "") + size + "px monospace";
       ctx.fillText(text, x, y);
   }
-
   // Helper grid formula mapping
   function getAccountCardPos(idx) {
       let col = idx % 4; 
@@ -107,17 +95,14 @@
           y: 350 + (row * 60)
       };
   }
-
   function render() {
       if (!isSystemOn) {
           ctx.fillStyle = "#000000";
           ctx.fillRect(0, 0, canvas.width, canvas.height);
           return;
       }
-
       ctx.fillStyle = "#0f0f12";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
-
       if (currentPhase === "Booting") {
           for (let i = 0; i <= bootStep; i++) {
               drawText(bootLogs[i], 15, "#39ff14", 50, 100 + (i * 35), false);
@@ -126,7 +111,6 @@
           ctx.fillRect(50, 480, (bootStep + 1) * 130, 15);
           return;
       }
-
       if (currentPhase === "Locked") {
           ctx.fillStyle = "#232328";
           ctx.fillRect(120, 40, 560, 520); 
@@ -166,15 +150,12 @@
               }
               drawText("Press ENTER to submit step progression.", 11, "#707075", 200, 260, false);
           }
-
           // --- ACCOUNT MANAGER HUB WINDOW PANEL ---
           ctx.fillStyle = "#1c1c21";
           ctx.fillRect(140, 290, 520, 250); 
           drawText("SELECT ACTIVE OS TARGET IDENTITY:", 12, "#a0a0a5", 160, 315, true);
-
           accountsList.forEach(function(acc, idx) {
               let pos = getAccountCardPos(idx);
-
               ctx.fillStyle = (idx === selectedAccountIdx) ? currentThemeColor : "#2a2a30";
               ctx.fillRect(pos.x, pos.y, 100, 45);
               
@@ -185,12 +166,10 @@
               
               drawText(acc.user.slice(0,8), 12, "#ffffff", pos.x + 10, pos.y + 27, idx === selectedAccountIdx);
           });
-
           // Action Operational Elements
           ctx.fillStyle = addingNewAccount ? "#ffcc00" : "#34c759";
           ctx.fillRect(160, 485, 130, 35);
           drawText(addingNewAccount ? "[Cancel]" : "+ Account", 12, "#000000", 185, 506, true);
-
           if (!addingNewAccount && currentUsername !== "User" && currentUsername !== "Guest") {
               ctx.fillStyle = "#ff453a";
               ctx.fillRect(305, 485, 130, 35);
@@ -198,12 +177,10 @@
           }
           return;
       }
-
       ctx.fillStyle = "#232328";
       ctx.fillRect(0, 0, canvas.width, 40);
       drawText(`AndlandOS v1.2 [User: ${currentUsername}]`, 14, currentThemeColor, 20, 25, true);
       drawText("SYSTEM SECURE", 14, "#f0f0f5", 650, 25, false);
-
       ctx.fillStyle = "#232328";
       ctx.fillRect(10, 60, 160, 520);
       drawText("NAVIGATION", 12, "#a0a0a5", 25, 90, true);
@@ -214,7 +191,6 @@
       ctx.fillStyle = "#ff453a";
       ctx.fillRect(20, 520, 140, 35);
       drawText("SHUTDOWN", 12, "#ffffff", 50, 542, true);
-
       if (currentPhase === "Desktop") {
           drawText(`Welcome session, ${currentUsername}`, 24, "#f0f0f5", 220, 90, true);
           icons.forEach(function(icon) {
@@ -252,7 +228,6 @@
               }
               drawText(theme.name, 11, "#ffffff", 220 + (idx * 85), 182, true);
           });
-
           ctx.fillStyle = "#232328";
           ctx.fillRect(210, 230, 550, 240);
           drawText("CORE USER SECURITY ENCRYPTIONS", 12, currentThemeColor, 230, 260, true);
@@ -262,13 +237,11 @@
               ctx.fillStyle = "#000000"; ctx.fillRect(230, 315, 250, 25);
               drawText(inputBuffer + "_", 14, "#39ff14", 235, 332, false);
           }
-
           drawText(`[P] Change System Password: ${currentPassword}`, 14, "#f0f0f5", 230, 370, false);
           if (changingPass) {
               ctx.fillStyle = "#000000"; ctx.fillRect(230, 385, 250, 25);
               drawText(inputBuffer + "_", 14, "#39ff14", 235, 402, false);
           }
-
           drawText("Press 'U' for User, 'P' for Password. Hit ENTER to confirm.", 11, "#a0a0a5", 230, 450, false);
           drawText("Changes save specifically to this isolated account config.", 12, currentThemeColor, 210, 535, false);
           drawText("Press 'D' to return back to desktop grid.", 12, "#707075", 210, 560, false);
@@ -284,7 +257,6 @@
           }
       }
   }
-
   const bootTimer = setInterval(function() {
       if (bootStep < bootLogs.length - 1) {
           bootStep++;
@@ -295,7 +267,6 @@
           render();
       }
   }, 600);
-
   function runLinuxShutdownSequence() {
       let shutdownTimer = setInterval(function() {
           if (shutdownLineCount < shutdownLogs.length) {
@@ -310,10 +281,8 @@
           }
       }, 250);
   }
-
   window.addEventListener('keydown', function(e) {
       if (!isSystemOn) return;
-
       if (currentPhase === "Locked" && addingNewAccount) {
           if (e.key === "Enter") {
               if (regStep === 0) {
@@ -345,7 +314,6 @@
           render();
           return;
       }
-
       if (currentPhase === "Settings" && (changingUser || changingPass)) {
           if (e.key === "Enter") {
               if (inputBuffer.trim().length > 0) {
@@ -369,7 +337,6 @@
           render();
           return;
       }
-
       if (currentPhase === "Locked" && !addingNewAccount) {
           loginError = false; 
           if (e.key === "Backspace") {
@@ -389,7 +356,6 @@
           render();
           return;
       }
-
       const key = e.key.toUpperCase();
       if (key === '1') { currentPhase = "Terminal"; changingUser = false; changingPass = false; }
       if (key === '2') { currentPhase = "Settings"; changingUser = false; changingPass = false; }
@@ -401,13 +367,11 @@
       }
       render();
   });
-
   canvas.addEventListener('click', function(e) {
       if (currentPhase === "Booting" || !isSystemOn) return;
       const rect = canvas.getBoundingClientRect();
       const mouseX = e.clientX - rect.left;
       const mouseY = e.clientY - rect.top;
-
       if (currentPhase !== "Locked" && mouseX >= 20 && mouseX <= 160 && mouseY >= 520 && mouseY <= 555) {
           currentPhase = "Shutdown";
           shutdownLineCount = 0;
@@ -415,7 +379,6 @@
           runLinuxShutdownSequence();
           return;
       }
-
       if (currentPhase === "Locked") {
           // Add Profile Event Key
           if (mouseX >= 160 && mouseX <= 290 && mouseY >= 485 && mouseY <= 520) {
@@ -426,7 +389,6 @@
               render();
               return;
           }
-
           // Delete Profile Event Key
           if (!addingNewAccount && currentUsername !== "User" && currentUsername !== "Guest") {
               if (mouseX >= 305 && mouseX <= 435 && mouseY >= 485 && mouseY <= 520) {
@@ -446,7 +408,6 @@
                   return;
               }
           }
-
           // Grid Selection Processor Engine
           if (!addingNewAccount) {
               accountsList.forEach(function(acc, idx) {
@@ -463,7 +424,6 @@
                       
                       typedPassword = "";
                       loginError = false;
-
                       if (currentUsername.toLowerCase() === "guest") {
                           currentPhase = "Desktop";
                       }
@@ -473,7 +433,6 @@
           render();
           return;
       }
-
       if (currentPhase === "Settings" && mouseY >= 160 && mouseY <= 195) {
           themes.forEach(function(theme, idx) {
               const boxX = 210 + (idx * 85);
@@ -484,7 +443,6 @@
               }
           });
       }
-
       if (currentPhase === "Desktop") {
           icons.forEach(function(icon) {
               if (mouseX >= icon.x && mouseX <= (icon.x + icon.w) &&
@@ -496,6 +454,5 @@
       }
       render();
   });
-
   render();
 </script>
