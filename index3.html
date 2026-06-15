@@ -1,19 +1,19 @@
 <style>
-  body {
-    margin: 0;
-    background-color: #0a0a0c;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
+  body { 
+    margin: 0; 
+    background-color: #0a0a0c; 
+    display: flex; 
+    justify-content: center; 
+    align-items: center; 
+    height: 100vh; 
     font-family: monospace;
-    cursor: default;
+    cursor: default; /* Set back to standard system cursor */
   }
-  canvas {
-    background-color: #0f0f12;
-    border: 4px solid #007aff;
-    border-radius: 8px;
-    box-shadow: 0 0 25px rgba(0, 122, 255, 0.4);
+  canvas { 
+    background-color: #0f0f12; 
+    border: 4px solid #007aff; 
+    border-radius: 8px; 
+    box-shadow: 0 0 25px rgba(0, 122, 255, 0.4); 
   }
 </style>
 
@@ -23,60 +23,39 @@
   const canvas = document.getElementById('andlandScreen');
   const ctx = canvas.getContext('2d');
 
-  let accountsList = JSON.parse(localStorage.getItem('andland_accounts')) || [
-      { user: "User", pass: "1234", theme: "#007aff" }, 
-      { user: "Guest", pass: "", theme: "#ff453a" }    
-  ];
-  let selectedAccountIdx = parseInt(localStorage.getItem('andland_active_idx')) || 0;
-  let currentUsername = accountsList[selectedAccountIdx].user;
-  let currentPassword = accountsList[selectedAccountIdx].pass;
-  let currentThemeColor = accountsList[selectedAccountIdx].theme || "#007aff"; 
+  // --- HELPER: WINDOW BORDER ---
+  function drawWindowBorder(x, y, w, h) {
+      ctx.strokeStyle = "#007aff"; 
+      ctx.lineWidth = 2;
+      ctx.strokeRect(x, y, w, h);
+  }
 
-  let currentPhase = "Booting"; 
-  let bootStep = 0, isSystemOn = true, typedPassword = "";
-  const bootLogs = ["[ OK ] Bios...", "[ OK ] Root...", "[ OK ] Multi-User...", "[ OK ] Kernel...", "READY."];
-
+  // --- DRAW TEXT HELPER ---
   function drawText(text, size, color, x, y, bold) {
       ctx.fillStyle = color;
       ctx.font = (bold ? "bold " : "") + size + "px monospace";
       ctx.fillText(text, x, y);
   }
 
+  // --- CORE RENDER FUNCTION ---
   function render() {
-    if (!isSystemOn) { ctx.fillStyle = "#000"; ctx.fillRect(0, 0, 800, 600); return; }
-    ctx.fillStyle = "#0f0f12"; ctx.fillRect(0, 0, 800, 600);
+      // Clear screen
+      ctx.fillStyle = "#0f0f12";
+      ctx.fillRect(0, 0, 800, 600);
 
-    if (currentPhase === "Booting") {
-        bootLogs.forEach((log, i) => { if(i <= bootStep) drawText(log, 15, "#39ff14", 50, 100 + (i * 35), false); });
-    } else if (currentPhase === "Locked") {
-        ctx.fillStyle = "#1e1e24"; ctx.fillRect(120, 40, 560, 520);
-        drawText("ANDLAND OS v1.3", 28, currentThemeColor, 310, 90, true);
-        drawText(`User: ${currentUsername}`, 14, "#ffffff", 200, 130, false);
-        drawText("Enter password to decrypt:", 14, "#a0a0a5", 200, 155, false);
-        ctx.fillStyle = "#000000"; ctx.fillRect(250, 185, 300, 45);
-        drawText("*".repeat(typedPassword.length), 24, "#ffffff", 270, 218, false);
-    } else {
-        ctx.fillStyle = "#232328"; ctx.fillRect(0, 0, 800, 40);
-        drawText(`AndlandOS v1.3 [${currentUsername}]`, 14, currentThemeColor, 20, 25, true);
-        ctx.fillStyle = "#232328"; ctx.fillRect(10, 60, 160, 520);
-        drawText("[D] Desktop", 14, "#fff", 25, 130, false);
-    }
+      // Example: Drawing a window with a border
+      // Terminal Window
+      ctx.fillStyle = "#1e1e24";
+      ctx.fillRect(190, 60, 590, 520);
+      drawWindowBorder(190, 60, 590, 520);
+      drawText("AndlandOS v1.3 - Console", 16, "#ffffff", 200, 90, true);
+
+      // Sidebar
+      ctx.fillStyle = "#232328";
+      ctx.fillRect(10, 60, 160, 520);
+      drawWindowBorder(10, 60, 160, 520);
+      drawText("NAVIGATION", 12, "#a0a0a5", 25, 90, true);
   }
-
-  window.addEventListener('keydown', (e) => {
-      if (e.key === 'r' || e.key === 'R') location.reload();
-      if (currentPhase === "Locked") {
-          if (e.key === "Enter" && typedPassword === currentPassword) currentPhase = "Desktop";
-          else if (e.key === "Backspace") typedPassword = typedPassword.slice(0, -1);
-          else if (e.key.length === 1) typedPassword += e.key;
-      }
-      render();
-  });
-
-  const bootTimer = setInterval(() => {
-      if (bootStep < bootLogs.length - 1) { bootStep++; render(); }
-      else { clearInterval(bootTimer); currentPhase = "Locked"; render(); }
-  }, 600);
 
   render();
 </script>
