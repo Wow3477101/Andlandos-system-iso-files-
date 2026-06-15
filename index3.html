@@ -136,13 +136,20 @@
                     drawText("Press ENTER to submit step progression.", 11, "#707075", 200, 260, false);
                 }
                 ctx.fillStyle = "#1c1c21"; ctx.fillRect(140, 290, 520, 250); drawText("SELECT ACTIVE OS TARGET IDENTITY:", 12, "#a0a0a5", 160, 315, true);
+                
                 accountsList.forEach(function(acc, idx) {
                     let pos = getAccountCardPos(idx);
-                    ctx.fillStyle = (idx === selectedAccountIdx) ? currentThemeColor : "#2a2a30";
+                    ctx.fillStyle = "#2a2a30";
                     ctx.fillRect(pos.x, pos.y, 100, 45);
-                    if (idx === selectedAccountIdx) { ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 2; ctx.strokeRect(pos.x, pos.y, 100, 45); }
+                    
+                    if (idx === selectedAccountIdx) {
+                        ctx.strokeStyle = "#007aff"; // Permanent Blue Border
+                        ctx.lineWidth = 4;           // Thick
+                        ctx.strokeRect(pos.x, pos.y, 100, 45);
+                    }
                     drawText(acc.user.slice(0,8), 12, "#ffffff", pos.x + 10, pos.y + 27, idx === selectedAccountIdx);
                 });
+                
                 ctx.fillStyle = addingNewAccount ? "#ffcc00" : "#34c759"; ctx.fillRect(160, 485, 130, 35); drawText(addingNewAccount ? "[Cancel]" : "+ Account", 12, "#000000", 185, 506, true);
                 if (!addingNewAccount && currentUsername !== "User" && currentUsername !== "Guest") { ctx.fillStyle = "#ff453a"; ctx.fillRect(305, 485, 130, 35); drawText("[X] Delete", 12, "#ffffff", 335, 506, true); }
                 ctx.fillStyle = "#007aff"; ctx.fillRect(650, 550, 120, 30); drawText("RESTART", 12, "#fff", 685, 570, true);
