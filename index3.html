@@ -13,12 +13,10 @@
         const canvas = document.getElementById('andlandScreen');
         const ctx = canvas.getContext('2d');
 
-        // --- KEYBOARD FOCUS FIX ---
         canvas.setAttribute('tabindex', '0');
         canvas.focus();
         canvas.addEventListener('click', () => canvas.focus());
 
-        // --- STORAGE MATRIX ---
         const defaultAccounts = [
             { user: "User", pass: "1234", theme: "#007aff" }, 
             { user: "Guest", pass: "", theme: "#ff453a" }    
@@ -95,6 +93,13 @@
             ctx.fillText(text, x, y);
         }
 
+        // --- NEW HELPER FOR BORDERS ---
+        function drawWindowBorder(x, y, w, h) {
+            ctx.strokeStyle = "#444"; 
+            ctx.lineWidth = 2;
+            ctx.strokeRect(x, y, w, h);
+        }
+
         function getAccountCardPos(idx) {
             let col = idx % 4; 
             let row = Math.floor(idx / 4); 
@@ -119,6 +124,7 @@
             }
             if (currentPhase === "Locked") {
                 ctx.fillStyle = "#232328"; ctx.fillRect(120, 40, 560, 520); 
+                drawWindowBorder(120, 40, 560, 520); // Border added
                 drawText("ANDLAND OS v1.3", 28, currentThemeColor, 280, 90, true);
                 if (!addingNewAccount) {
                     drawText(`User Profile: ${currentUsername}`, 14, "#ffffff", 200, 130, false);
@@ -143,8 +149,8 @@
                     ctx.fillRect(pos.x, pos.y, 100, 45);
                     
                     if (idx === selectedAccountIdx) {
-                        ctx.strokeStyle = "#007aff"; // Permanent Blue Border
-                        ctx.lineWidth = 4;           // Thick
+                        ctx.strokeStyle = "#007aff";
+                        ctx.lineWidth = 4;
                         ctx.strokeRect(pos.x, pos.y, 100, 45);
                     }
                     drawText(acc.user.slice(0,8), 12, "#ffffff", pos.x + 10, pos.y + 27, idx === selectedAccountIdx);
@@ -156,7 +162,11 @@
                 return;
             }
             ctx.fillStyle = "#232328"; ctx.fillRect(0, 0, canvas.width, 40); drawText(`AndlandOS v1.3 [User: ${currentUsername}]`, 14, currentThemeColor, 20, 25, true); drawText("SYSTEM SECURE", 14, "#f0f0f5", 650, 25, false);
-            ctx.fillStyle = "#232328"; ctx.fillRect(10, 60, 160, 520); drawText("NAVIGATION", 12, "#a0a0a5", 25, 90, true); drawText("[D] Desktop", 14, "#f0f0f5", 25, 130, false); drawText("[1] Console", 14, "#39ff14", 25, 170, false); drawText("[2] Settings", 14, currentThemeColor, 25, 210, false); drawText("[L] Lock OS", 14, "#ffcc00", 25, 250, false); drawText("[R] Restart", 14, "#007aff", 25, 290, false); ctx.fillStyle = "#ff453a"; ctx.fillRect(20, 520, 140, 35); drawText("SHUTDOWN", 12, "#ffffff", 50, 542, true);
+            
+            ctx.fillStyle = "#232328"; ctx.fillRect(10, 60, 160, 520); 
+            drawWindowBorder(10, 60, 160, 520); // Border added
+            drawText("NAVIGATION", 12, "#a0a0a5", 25, 90, true); drawText("[D] Desktop", 14, "#f0f0f5", 25, 130, false); drawText("[1] Console", 14, "#39ff14", 25, 170, false); drawText("[2] Settings", 14, currentThemeColor, 25, 210, false); drawText("[L] Lock OS", 14, "#ffcc00", 25, 250, false); drawText("[R] Restart", 14, "#007aff", 25, 290, false); ctx.fillStyle = "#ff453a"; ctx.fillRect(20, 520, 140, 35); drawText("SHUTDOWN", 12, "#ffffff", 50, 542, true);
+            
             if (currentPhase === "Desktop") {
                 drawText(`Welcome session, ${currentUsername}`, 24, "#f0f0f5", 220, 90, true);
                 icons.forEach(function(icon) {
@@ -165,9 +175,13 @@
                     drawText(icon.name, 12, "#f0f0f5", icon.x + 5, icon.y + 40, false);
                 });
             } else if (currentPhase === "Terminal") {
-                ctx.fillStyle = "#000000"; ctx.fillRect(190, 60, 590, 520); ctx.fillStyle = currentThemeColor; ctx.fillRect(190, 60, 590, 30); drawText("AndlandOS System Console", 14, "#ffffff", 205, 80, true); drawText(`${currentUsername.toLowerCase()}@andlandos_core:~$ profile_data`, 14, "#39ff14", 205, 120, false); drawText("Active Storage Identity: " + currentUsername, 14, "#f0f0f5", 205, 150, false); drawText("Assigned Profile Color HEX: " + currentThemeColor, 14, "#f0f0f5", 205, 170, false); drawText("Press 'D' to escape terminal window container.", 12, "#a0a0a5", 205, 560, false);
+                ctx.fillStyle = "#000000"; ctx.fillRect(190, 60, 590, 520);
+                drawWindowBorder(190, 60, 590, 520); // Border added
+                ctx.fillStyle = currentThemeColor; ctx.fillRect(190, 60, 590, 30); drawText("AndlandOS System Console", 14, "#ffffff", 205, 80, true); drawText(`${currentUsername.toLowerCase()}@andlandos_core:~$ profile_data`, 14, "#39ff14", 205, 120, false); drawText("Active Storage Identity: " + currentUsername, 14, "#f0f0f5", 205, 150, false); drawText("Assigned Profile Color HEX: " + currentThemeColor, 14, "#f0f0f5", 205, 170, false); drawText("Press 'D' to escape terminal window container.", 12, "#a0a0a5", 205, 560, false);
             } else if (currentPhase === "Settings") {
-                ctx.fillStyle = "#1c1c21"; ctx.fillRect(190, 60, 590, 520); drawText("Control Panel & Environment Configuration", 20, "#ffffff", 210, 95, true); drawText("SELECT SYSTEM INTERFACE THEME COLOR FOR THIS USER:", 12, "#a0a0a5", 210, 140, true);
+                ctx.fillStyle = "#1c1c21"; ctx.fillRect(190, 60, 590, 520); 
+                drawWindowBorder(190, 60, 590, 520); // Border added
+                drawText("Control Panel & Environment Configuration", 20, "#ffffff", 210, 95, true); drawText("SELECT SYSTEM INTERFACE THEME COLOR FOR THIS USER:", 12, "#a0a0a5", 210, 140, true);
                 themes.forEach(function(theme, idx) {
                     ctx.fillStyle = theme.color; ctx.fillRect(210 + (idx * 85), 160, 70, 35);
                     if (currentThemeColor === theme.color) { ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 3; ctx.strokeRect(210 + (idx * 85), 160, 70, 35); }
