@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body {
+      margin: 0;
+      background-color: #0a0a0c;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      font-family: monospace;
+    }
+    #andlandScreen {
+      background-color: #0f0f12 !important;
+      border: none !important;
+      outline: none !important;
+    }
+  </style>
+</head>
+<body>
+
+<canvas id="andlandScreen" width="800" height="600"></canvas>
+
+<script>
+  const canvas = document.getElementById('andlandScreen');
+  const ctx = canvas.getContext('2d');
+  
+  // Clean render
+  ctx.fillStyle = "#0f0f12";
+  ctx.fillRect(0, 0, 800, 600);
+  
+  ctx.fillStyle = "#39ff14";
+  ctx.font = "24px monospace";
+  ctx.fillText("ANDLAND OS v1.3 - SYSTEM READY", 50, 100);
+</script>
+</body>
+</html>
