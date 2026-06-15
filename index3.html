@@ -1,0 +1,83 @@
+<style>
+  body {
+    margin: 0;
+    background-color: #0a0a0c;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    font-family: monospace;
+    cursor: default;
+  }
+  canvas {
+    background-color: #0f0f12;
+    border: 4px solid #007aff;
+    border-radius: 8px;
+    box-shadow: 0 0 25px rgba(0, 122, 255, 0.4);
+  }
+</style>
+
+<canvas id="andlandScreen" width="800" height="600"></canvas>
+
+<script>
+  const canvas = document.getElementById('andlandScreen');
+  const ctx = canvas.getContext('2d');
+
+  // --- STORAGE & SETTINGS ---
+  let accountsList = JSON.parse(localStorage.getItem('andland_accounts')) || [
+      { user: "User", pass: "1234", theme: "#007aff" }, 
+      { user: "Guest", pass: "", theme: "#ff453a" }    
+  ];
+  let selectedAccountIdx = parseInt(localStorage.getItem('andland_active_idx')) || 0;
+  let currentUsername = accountsList[selectedAccountIdx].user;
+  let currentPassword = accountsList[selectedAccountIdx].pass;
+  let currentThemeColor = accountsList[selectedAccountIdx].theme || "#007aff"; 
+
+  let currentPhase = "Booting"; 
+  let bootStep = 0, isSystemOn = true, typedPassword = "", loginError = false;
+  let changingUser = false, changingPass = false, addingNewAccount = false;
+  let inputBuffer = "", tempNewPass = "", regStep = 0, shutdownLineCount = 0;
+
+  const bootLogs = ["[ OK ] Bios...", "[ OK ] Root...", "[ OK ] Multi-User...", "[ OK ] Kernel...", "READY."];
+  const shutdownLogs = ["Closing...", "[ OK ] Unmounting...", "Halt."];
+  const icons = [{ name: "Console", x: 220, y: 120, app: "Terminal" }, { name: "Settings", x: 340, y: 120, app: "Settings" }];
+
+  // --- HELPERS ---
+  function drawWindowBorder(x, y, w, h) { ctx.strokeStyle = "#007aff"; ctx.lineWidth = 2; ctx.strokeRect(x, y, w, h); }
+  function drawText(text, size, color, x, y, bold) { ctx.fillStyle = color; ctx.font = (bold ? "bold " : "") + size + "px monospace"; ctx.fillText(text, x, y); }
+
+  function render() {
+    if (!isSystemOn) { ctx.fillStyle = "#000"; ctx.fillRect(0, 0, 800, 600); return; }
+    ctx.fillStyle = "#0f0f12"; ctx.fillRect(0, 0, 800, 600);
+
+    if (currentPhase === "Booting") {
+        bootLogs.forEach((log, i) => { if(i <= bootStep) drawText(log, 15, "#39ff14", 50, 100 + (i * 35), false); });
+    } else if (currentPhase === "Locked") {
+        ctx.fillStyle = "#1e1e24"; ctx.fillRect(120, 40, 560, 520); drawWindowBorder(120, 40, 560, 520);
+        drawText("ANDLAND OS v1.3", 28, currentThemeColor, 310, 90, true);
+    } else {
+        // Top Bar
+        ctx.fillStyle = "#232328"; ctx.fillRect(0, 0, 800, 40);
+        drawText(`AndlandOS v1.3 [${currentUsername}]`, 14, currentThemeColor, 20, 25, true);
+        
+        // Sidebar
+        ctx.fillStyle = "#232328"; ctx.fillRect(10, 60, 160, 520); drawWindowBorder(10, 60, 160, 520);
+        drawText("[D] Desktop", 14, "#fff", 25, 130, false);
+        drawText("[1] Console", 14, "#39ff14", 25, 170, false);
+        drawText("[R] Restart", 14, "#007aff", 25, 210, false);
+    }
+  }
+
+  // --- INPUTS ---
+  window.addEventListener('keydown', (e) => {
+      if (e.key === 'r' || e.key === 'R') location.reload();
+      render();
+  });
+
+  const bootTimer = setInterval(() => {
+      if (bootStep < bootLogs.length - 1) { bootStep++; render(); }
+      else { clearInterval(bootTimer); currentPhase = "Locked"; render(); }
+  }, 600);
+
+  render();
+</script>
