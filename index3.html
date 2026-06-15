@@ -36,8 +36,11 @@
   let bootStep = 0, isSystemOn = true, typedPassword = "";
   const bootLogs = ["[ OK ] Bios...", "[ OK ] Root...", "[ OK ] Multi-User...", "[ OK ] Kernel...", "READY."];
 
-  function drawWindowBorder(x, y, w, h) { ctx.strokeStyle = currentThemeColor; ctx.lineWidth = 2; ctx.strokeRect(x, y, w, h); }
-  function drawText(text, size, color, x, y, bold) { ctx.fillStyle = color; ctx.font = (bold ? "bold " : "") + size + "px monospace"; ctx.fillText(text, x, y); }
+  function drawText(text, size, color, x, y, bold) {
+      ctx.fillStyle = color;
+      ctx.font = (bold ? "bold " : "") + size + "px monospace";
+      ctx.fillText(text, x, y);
+  }
 
   function render() {
     if (!isSystemOn) { ctx.fillStyle = "#000"; ctx.fillRect(0, 0, 800, 600); return; }
@@ -46,7 +49,7 @@
     if (currentPhase === "Booting") {
         bootLogs.forEach((log, i) => { if(i <= bootStep) drawText(log, 15, "#39ff14", 50, 100 + (i * 35), false); });
     } else if (currentPhase === "Locked") {
-        ctx.fillStyle = "#1e1e24"; ctx.fillRect(120, 40, 560, 520); drawWindowBorder(120, 40, 560, 520);
+        ctx.fillStyle = "#1e1e24"; ctx.fillRect(120, 40, 560, 520);
         drawText("ANDLAND OS v1.3", 28, currentThemeColor, 310, 90, true);
         drawText(`User: ${currentUsername}`, 14, "#ffffff", 200, 130, false);
         drawText("Enter password to decrypt:", 14, "#a0a0a5", 200, 155, false);
@@ -55,7 +58,7 @@
     } else {
         ctx.fillStyle = "#232328"; ctx.fillRect(0, 0, 800, 40);
         drawText(`AndlandOS v1.3 [${currentUsername}]`, 14, currentThemeColor, 20, 25, true);
-        ctx.fillStyle = "#232328"; ctx.fillRect(10, 60, 160, 520); drawWindowBorder(10, 60, 160, 520);
+        ctx.fillStyle = "#232328"; ctx.fillRect(10, 60, 160, 520);
         drawText("[D] Desktop", 14, "#fff", 25, 130, false);
     }
   }
