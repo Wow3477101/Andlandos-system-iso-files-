@@ -1,0 +1,500 @@
+<style>
+  body {
+    margin: 0;
+    background-color: #0a0a0c;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    font-family: monospace;
+  }
+  canvas {
+    background-color: #0f0f12;
+    border: 4px solid #333;
+    border-radius: 8px;
+    box-shadow: 0 0 25px rgba(0, 122, 255, 0.4);
+  }
+</style>
+
+<canvas id="andlandScreen" width="800" height="600"></canvas>
+
+<script>
+  const canvas = document.getElementById('andlandScreen');
+  const ctx = canvas.getContext('2d');
+
+  // --- STORAGE MATRIX ---
+  const defaultAccounts = [
+      { user: "User", pass: "1234", theme: "#007aff" }, 
+      { user: "Guest", pass: "", theme: "#ff453a" }    
+  ];
+
+  let accountsList = JSON.parse(localStorage.getItem('andland_accounts'));
+  if (!accountsList || accountsList.length === 0) {
+      accountsList = defaultAccounts;
+      localStorage.setItem('andland_accounts', JSON.stringify(accountsList));
+  }
+
+  let selectedAccountIdx = parseInt(localStorage.getItem('andland_active_idx')) || 0;
+  if (selectedAccountIdx >= accountsList.length) selectedAccountIdx = 0;
+
+  let currentUsername = accountsList[selectedAccountIdx].user;
+  let currentPassword = accountsList[selectedAccountIdx].pass;
+  let currentThemeColor = accountsList[selectedAccountIdx].theme || "#007aff"; 
+
+  let currentPhase = "Booting"; 
+  let bootStep = 0;
+  let isSystemOn = true;
+  let typedPassword = "";
+  let loginError = false;
+
+  let changingUser = false;
+  let changingPass = false;
+  let addingNewAccount = false; 
+  let inputBuffer = "";
+  let tempNewPass = "";        
+  let regStep = 0;             
+
+  let shutdownLineCount = 0;
+
+  const bootLogs = [
+      "[ OK ] Loading AndlandOS Bios Subsystems...",
+      "[ OK ] Mounting Virtual Root Directories...",
+      "[ OK ] Loading Multi-User Security Modules...",
+      "[ OK ] Generating Tiled Desktop Profiles Grid...",
+      "ANDLANDOS KERNEL READY."
+  ];
+
+  const shutdownLogs = [
+      "System is closing...",
+      "[ INFO ] Unmounting /dev/sda1 secure blocks...",
+      "[ OK ] Terminating background system tasks...",
+      "[ OK ] Stopping AndlandOS core daemon grid...",
+      "CRITICAL: CPU_0 core dump triggered.",
+      "HEXADECIMAL DUMP: 0x00F3A1 -> 0xFF3302",
+      "Registers: eax=00000003 ebx=f76b6000 ecx=00000000",
+      "Stack Trace: [<c010714a>] init+0x1a/0x90",
+      "Code: 89 e5 83 ec 08 57 55 53 e8 a1 fd ff ff",
+      "Killing all remaining system processes... Halt.",
+      "Powering down subsystem modules safely."
+  ];
+
+  const themes = [
+      { name: "Blue",   color: "#007aff" },
+      { name: "Red",    color: "#ff453a" },
+      { name: "Yellow", color: "#ffcc00" },
+      { name: "Green",  color: "#34c759" }
+  ];
+
+  const icons = [
+      { name: "Console",  x: 220, y: 120, w: 80, h: 80, iconColor: "#39ff14", app: "Terminal" },
+      { name: "Settings", x: 340, y: 120, w: 80, h: 80, iconColor: "#ffffff", app: "Settings" },
+      { name: "Power Off",x: 460, y: 120, w: 80, h: 80, iconColor: "#ff453a", app: "Shutdown" }
+  ];
+
+  function drawText(text, size, color, x, y, bold) {
+      ctx.fillStyle = color;
+      ctx.font = (bold ? "bold " : "") + size + "px monospace";
+      ctx.fillText(text, x, y);
+  }
+
+  // Helper grid formula mapping
+  function getAccountCardPos(idx) {
+      let col = idx % 4; 
+      let row = Math.floor(idx / 4); 
+      return {
+          x: 160 + (col * 115),
+          y: 350 + (row * 60)
+      };
+  }
+
+  function render() {
+      if (!isSystemOn) {
+          ctx.fillStyle = "#000000";
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          return;
+      }
+
+      ctx.fillStyle = "#0f0f12";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      if (currentPhase === "Booting") {
+          for (let i = 0; i <= bootStep; i++) {
+              drawText(bootLogs[i], 15, "#39ff14", 50, 100 + (i * 35), false);
+          }
+          ctx.fillStyle = currentThemeColor;
+          ctx.fillRect(50, 480, (bootStep + 1) * 130, 15);
+          return;
+      }
+
+      if (currentPhase === "Locked") {
+          ctx.fillStyle = "#232328";
+          ctx.fillRect(120, 40, 560, 520); 
+          
+          drawText("ANDLAND OS", 28, currentThemeColor, 310, 90, true);
+          
+          if (!addingNewAccount) {
+              drawText(`User Profile: ${currentUsername}`, 14, "#ffffff", 200, 130, false);
+              drawText("Enter password to decrypt storage:", 14, "#a0a0a5", 200, 155, false);
+              
+              ctx.fillStyle = "#000000";
+              ctx.fillRect(250, 185, 300, 45);
+              ctx.strokeStyle = loginError ? "#ff453a" : currentThemeColor;
+              ctx.lineWidth = 2;
+              ctx.strokeRect(250, 185, 300, 45);
+              
+              let stars = "";
+              for(let i=0; i<typedPassword.length; i++) { stars += "*"; }
+              drawText(stars, 24, "#ffffff", 270, 218, false);
+              
+              if (loginError) {
+                  drawText("INCORRECT CREDENTIALS", 12, "#ff453a", 320, 255, true);
+              } else {
+                  drawText("Type password & press ENTER", 12, "#707075", 300, 255, false);
+              }
+          } else {
+              drawText("CREATING NEW ACCOUNT", 16, currentThemeColor, 200, 130, true);
+              if (regStep === 0) {
+                  drawText("Enter New Profile Name:", 14, "#ffffff", 200, 165, false);
+                  ctx.fillStyle = "#000000"; ctx.fillRect(200, 185, 300, 35);
+                  drawText(inputBuffer + "_", 14, "#39ff14", 210, 207, false);
+              } else {
+                  drawText(`Username selected: ${inputBuffer}`, 12, "#a0a0a5", 200, 160, false);
+                  drawText("Assign Key Password Structure:", 14, "#ffffff", 200, 185, false);
+                  ctx.fillStyle = "#000000"; ctx.fillRect(200, 205, 300, 35);
+                  drawText(tempNewPass + "_", 14, "#39ff14", 210, 227, false);
+              }
+              drawText("Press ENTER to submit step progression.", 11, "#707075", 200, 260, false);
+          }
+
+          // --- ACCOUNT MANAGER HUB WINDOW PANEL ---
+          ctx.fillStyle = "#1c1c21";
+          ctx.fillRect(140, 290, 520, 250); 
+          drawText("SELECT ACTIVE OS TARGET IDENTITY:", 12, "#a0a0a5", 160, 315, true);
+
+          accountsList.forEach(function(acc, idx) {
+              let pos = getAccountCardPos(idx);
+
+              ctx.fillStyle = (idx === selectedAccountIdx) ? currentThemeColor : "#2a2a30";
+              ctx.fillRect(pos.x, pos.y, 100, 45);
+              
+              if (idx === selectedAccountIdx) {
+                  ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 2;
+                  ctx.strokeRect(pos.x, pos.y, 100, 45);
+              }
+              
+              drawText(acc.user.slice(0,8), 12, "#ffffff", pos.x + 10, pos.y + 27, idx === selectedAccountIdx);
+          });
+
+          // Action Operational Elements
+          ctx.fillStyle = addingNewAccount ? "#ffcc00" : "#34c759";
+          ctx.fillRect(160, 485, 130, 35);
+          drawText(addingNewAccount ? "[Cancel]" : "+ Account", 12, "#000000", 185, 506, true);
+
+          if (!addingNewAccount && currentUsername !== "User" && currentUsername !== "Guest") {
+              ctx.fillStyle = "#ff453a";
+              ctx.fillRect(305, 485, 130, 35);
+              drawText("[X] Delete", 12, "#ffffff", 335, 506, true);
+          }
+          return;
+      }
+
+      ctx.fillStyle = "#232328";
+      ctx.fillRect(0, 0, canvas.width, 40);
+      drawText(`AndlandOS v1.2 [User: ${currentUsername}]`, 14, currentThemeColor, 20, 25, true);
+      drawText("SYSTEM SECURE", 14, "#f0f0f5", 650, 25, false);
+
+      ctx.fillStyle = "#232328";
+      ctx.fillRect(10, 60, 160, 520);
+      drawText("NAVIGATION", 12, "#a0a0a5", 25, 90, true);
+      drawText("[D] Desktop", 14, "#f0f0f5", 25, 130, false);
+      drawText("[1] Console", 14, "#39ff14", 25, 170, false);
+      drawText("[2] Settings", 14, currentThemeColor, 25, 210, false);
+      
+      ctx.fillStyle = "#ff453a";
+      ctx.fillRect(20, 520, 140, 35);
+      drawText("SHUTDOWN", 12, "#ffffff", 50, 542, true);
+
+      if (currentPhase === "Desktop") {
+          drawText(`Welcome session, ${currentUsername}`, 24, "#f0f0f5", 220, 90, true);
+          icons.forEach(function(icon) {
+              ctx.fillStyle = "#232328";
+              ctx.fillRect(icon.x, icon.y, icon.w, icon.h);
+              ctx.fillStyle = icon.app === "Settings" ? currentThemeColor : icon.iconColor;
+              ctx.fillRect(icon.x, icon.y + 70, icon.w, 10);
+              drawText(icon.name, 12, "#f0f0f5", icon.x + 5, icon.y + 40, false);
+          });
+      } 
+      else if (currentPhase === "Terminal") {
+          ctx.fillStyle = "#000000";
+          ctx.fillRect(190, 60, 590, 520);
+          ctx.fillStyle = currentThemeColor;
+          ctx.fillRect(190, 60, 590, 30);
+          drawText("AndlandOS System Console", 14, "#ffffff", 205, 80, true);
+          drawText(`${currentUsername.toLowerCase()}@andlandos_core:~$ profile_data`, 14, "#39ff14", 205, 120, false);
+          drawText("Active Storage Identity: " + currentUsername, 14, "#f0f0f5", 205, 150, false);
+          drawText("Assigned Profile Color HEX: " + currentThemeColor, 14, "#f0f0f5", 205, 170, false);
+          drawText("Press 'D' to escape terminal window container.", 12, "#a0a0a5", 205, 560, false);
+      } 
+      else if (currentPhase === "Settings") {
+          ctx.fillStyle = "#1c1c21";
+          ctx.fillRect(190, 60, 590, 520);
+          drawText("Control Panel & Environment Configuration", 20, "#ffffff", 210, 95, true);
+          
+          drawText("SELECT SYSTEM INTERFACE THEME COLOR FOR THIS USER:", 12, "#a0a0a5", 210, 140, true);
+          themes.forEach(function(theme, idx) {
+              ctx.fillStyle = theme.color;
+              ctx.fillRect(210 + (idx * 85), 160, 70, 35);
+              if (currentThemeColor === theme.color) {
+                  ctx.strokeStyle = "#ffffff";
+                  ctx.lineWidth = 3;
+                  ctx.strokeRect(210 + (idx * 85), 160, 70, 35);
+              }
+              drawText(theme.name, 11, "#ffffff", 220 + (idx * 85), 182, true);
+          });
+
+          ctx.fillStyle = "#232328";
+          ctx.fillRect(210, 230, 550, 240);
+          drawText("CORE USER SECURITY ENCRYPTIONS", 12, currentThemeColor, 230, 260, true);
+          
+          drawText(`[U] Change Username: ${currentUsername}`, 14, "#f0f0f5", 230, 300, false);
+          if (changingUser) {
+              ctx.fillStyle = "#000000"; ctx.fillRect(230, 315, 250, 25);
+              drawText(inputBuffer + "_", 14, "#39ff14", 235, 332, false);
+          }
+
+          drawText(`[P] Change System Password: ${currentPassword}`, 14, "#f0f0f5", 230, 370, false);
+          if (changingPass) {
+              ctx.fillStyle = "#000000"; ctx.fillRect(230, 385, 250, 25);
+              drawText(inputBuffer + "_", 14, "#39ff14", 235, 402, false);
+          }
+
+          drawText("Press 'U' for User, 'P' for Password. Hit ENTER to confirm.", 11, "#a0a0a5", 230, 450, false);
+          drawText("Changes save specifically to this isolated account config.", 12, currentThemeColor, 210, 535, false);
+          drawText("Press 'D' to return back to desktop grid.", 12, "#707075", 210, 560, false);
+      }
+      else if (currentPhase === "Shutdown") {
+          ctx.fillStyle = "#000000";
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          for (let i = 0; i < shutdownLineCount; i++) {
+              let clr = "#ffffff";
+              if (i === 0) clr = "#ff453a"; 
+              if (shutdownLogs[i].includes("CRITICAL") || shutdownLogs[i].includes("Registers")) clr = "#ffcc00"; 
+              drawText(shutdownLogs[i], 14, clr, 40, 50 + (i * 30), false);
+          }
+      }
+  }
+
+  const bootTimer = setInterval(function() {
+      if (bootStep < bootLogs.length - 1) {
+          bootStep++;
+          render();
+      } else {
+          clearInterval(bootTimer);
+          currentPhase = "Locked"; 
+          render();
+      }
+  }, 600);
+
+  function runLinuxShutdownSequence() {
+      let shutdownTimer = setInterval(function() {
+          if (shutdownLineCount < shutdownLogs.length) {
+              shutdownLineCount++;
+              render();
+          } else {
+              clearInterval(shutdownTimer);
+              setTimeout(function() {
+                  isSystemOn = false;
+                  render();
+              }, 1200);
+          }
+      }, 250);
+  }
+
+  window.addEventListener('keydown', function(e) {
+      if (!isSystemOn) return;
+
+      if (currentPhase === "Locked" && addingNewAccount) {
+          if (e.key === "Enter") {
+              if (regStep === 0) {
+                  if (inputBuffer.trim().length > 0) {
+                      regStep = 1; 
+                  }
+              } else {
+                  accountsList.push({ user: inputBuffer, pass: tempNewPass, theme: "#007aff" });
+                  localStorage.setItem('andland_accounts', JSON.stringify(accountsList));
+                  selectedAccountIdx = accountsList.length - 1;
+                  localStorage.setItem('andland_active_idx', selectedAccountIdx);
+                  
+                  currentUsername = inputBuffer;
+                  currentPassword = tempNewPass;
+                  currentThemeColor = "#007aff";
+                  
+                  addingNewAccount = false;
+                  inputBuffer = "";
+                  tempNewPass = "";
+                  regStep = 0;
+              }
+          } else if (e.key === "Backspace") {
+              if (regStep === 0) inputBuffer = inputBuffer.slice(0, -1);
+              else tempNewPass = tempNewPass.slice(0, -1);
+          } else if (e.key.length === 1) {
+              if (regStep === 0 && inputBuffer.length < 12) inputBuffer += e.key;
+              if (regStep === 1 && tempNewPass.length < 12) tempNewPass += e.key;
+          }
+          render();
+          return;
+      }
+
+      if (currentPhase === "Settings" && (changingUser || changingPass)) {
+          if (e.key === "Enter") {
+              if (inputBuffer.trim().length > 0) {
+                  if (changingUser) {
+                      currentUsername = inputBuffer;
+                      accountsList[selectedAccountIdx].user = currentUsername;
+                  } else if (changingPass) {
+                      currentPassword = inputBuffer;
+                      accountsList[selectedAccountIdx].pass = currentPassword;
+                  }
+                  localStorage.setItem('andland_accounts', JSON.stringify(accountsList));
+              }
+              changingUser = false;
+              changingPass = false;
+              inputBuffer = "";
+          } else if (e.key === "Backspace") {
+              inputBuffer = inputBuffer.slice(0, -1);
+          } else if (e.key.length === 1) {
+              if (inputBuffer.length < 15) inputBuffer += e.key;
+          }
+          render();
+          return;
+      }
+
+      if (currentPhase === "Locked" && !addingNewAccount) {
+          loginError = false; 
+          if (e.key === "Backspace") {
+              typedPassword = typedPassword.slice(0, -1);
+          } 
+          else if (e.key === "Enter") {
+              if (typedPassword === currentPassword) {
+                  currentPhase = "Desktop"; 
+                  typedPassword = "";
+              } else {
+                  typedPassword = "";
+                  loginError = true;
+              }
+          } else if (e.key.length === 1) {
+              if (typedPassword.length < 15) typedPassword += e.key;
+          }
+          render();
+          return;
+      }
+
+      const key = e.key.toUpperCase();
+      if (key === '1') { currentPhase = "Terminal"; changingUser = false; changingPass = false; }
+      if (key === '2') { currentPhase = "Settings"; changingUser = false; changingPass = false; }
+      if (key === 'D') { currentPhase = "Desktop"; changingUser = false; changingPass = false; }
+      
+      if (currentPhase === "Settings") {
+          if (key === 'U') { changingUser = true; changingPass = false; inputBuffer = currentUsername; }
+          if (key === 'P') { changingPass = true; changingUser = false; inputBuffer = currentPassword; }
+      }
+      render();
+  });
+
+  canvas.addEventListener('click', function(e) {
+      if (currentPhase === "Booting" || !isSystemOn) return;
+      const rect = canvas.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
+
+      if (currentPhase !== "Locked" && mouseX >= 20 && mouseX <= 160 && mouseY >= 520 && mouseY <= 555) {
+          currentPhase = "Shutdown";
+          shutdownLineCount = 0;
+          render();
+          runLinuxShutdownSequence();
+          return;
+      }
+
+      if (currentPhase === "Locked") {
+          // Add Profile Event Key
+          if (mouseX >= 160 && mouseX <= 290 && mouseY >= 485 && mouseY <= 520) {
+              addingNewAccount = !addingNewAccount;
+              inputBuffer = "";
+              tempNewPass = "";
+              regStep = 0;
+              render();
+              return;
+          }
+
+          // Delete Profile Event Key
+          if (!addingNewAccount && currentUsername !== "User" && currentUsername !== "Guest") {
+              if (mouseX >= 305 && mouseX <= 435 && mouseY >= 485 && mouseY <= 520) {
+                  accountsList.splice(selectedAccountIdx, 1);
+                  localStorage.setItem('andland_accounts', JSON.stringify(accountsList));
+                  
+                  selectedAccountIdx = 0;
+                  localStorage.setItem('andland_active_idx', selectedAccountIdx);
+                  
+                  currentUsername = accountsList[0].user;
+                  currentPassword = accountsList[0].pass;
+                  currentThemeColor = accountsList[0].theme || "#007aff";
+                  typedPassword = "";
+                  loginError = false;
+                  
+                  render();
+                  return;
+              }
+          }
+
+          // Grid Selection Processor Engine
+          if (!addingNewAccount) {
+              accountsList.forEach(function(acc, idx) {
+                  let pos = getAccountCardPos(idx);
+                  if (mouseX >= pos.x && mouseX <= pos.x + 100 &&
+                      mouseY >= pos.y && mouseY <= pos.y + 45) {
+                      
+                      selectedAccountIdx = idx;
+                      localStorage.setItem('andland_active_idx', selectedAccountIdx);
+                      
+                      currentUsername = accountsList[idx].user;
+                      currentPassword = accountsList[idx].pass;
+                      currentThemeColor = accountsList[idx].theme || "#007aff";
+                      
+                      typedPassword = "";
+                      loginError = false;
+
+                      if (currentUsername.toLowerCase() === "guest") {
+                          currentPhase = "Desktop";
+                      }
+                  }
+              });
+          }
+          render();
+          return;
+      }
+
+      if (currentPhase === "Settings" && mouseY >= 160 && mouseY <= 195) {
+          themes.forEach(function(theme, idx) {
+              const boxX = 210 + (idx * 85);
+              if (mouseX >= boxX && mouseX <= boxX + 70) {
+                  currentThemeColor = theme.color;
+                  accountsList[selectedAccountIdx].theme = currentThemeColor;
+                  localStorage.setItem('andland_accounts', JSON.stringify(accountsList));
+              }
+          });
+      }
+
+      if (currentPhase === "Desktop") {
+          icons.forEach(function(icon) {
+              if (mouseX >= icon.x && mouseX <= (icon.x + icon.w) &&
+                  mouseY >= icon.y && mouseY <= (icon.y + icon.h)) {
+                  currentPhase = icon.app;
+                  render();
+              }
+          });
+      }
+      render();
+  });
+
+  render();
+</script>
