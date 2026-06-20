@@ -2,9 +2,10 @@
 <html>
 <head>
 <style>
-  body { margin: 0; background: #0a0a0c; color: #fff; font-family: monospace; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
-  #screen { width: 800px; height: 600px; background: #15151a; position: relative; }
-  /* Add your UI styling here */
+  body { margin: 0; background: #000; color: #fff; font-family: monospace; display: flex; justify-content: center; align-items: center; height: 100vh; }
+  #screen { width: 800px; height: 600px; background: #15151a; border: 1px solid #333; position: relative; padding: 20px; }
+  .btn { background: #222; color: #fff; border: 1px solid #444; padding: 5px 10px; cursor: pointer; }
+  #terminal { background: #000; height: 400px; overflow-y: auto; padding: 10px; border: 1px solid #007aff; }
 </style>
 </head>
 <body>
@@ -12,40 +13,67 @@
 <div id="screen"></div>
 
 <script>
-  // State Management
   const state = {
     version: "1.3",
     accounts: JSON.parse(localStorage.getItem('andland_accounts')) || [{user: "User", pass: "1234"}],
     activeUserIdx: 0,
-    phase: "LOCKSCREEN" // LOCKSCREEN, DESKTOP, CONSOLE, SETTINGS
+    phase: "LOCKSCREEN", // LOCKSCREEN, DESKTOP, CONSOLE, SETTINGS
+    consoleBuffer: ["System Ready...", "Type 'help' for commands."]
   };
 
   function render() {
     const screen = document.getElementById('screen');
-    screen.innerHTML = `<h1>AndlandOS v${state.version}</h1>`;
-    
     if (state.phase === "LOCKSCREEN") {
-      screen.innerHTML += `
-        <div id="account-select">
-          ${state.accounts.map((acc, i) => `<button onclick="state.activeUserIdx=${i}; render()">${acc.user}</button>`).join('')}
-          <button onclick="addAccount()">+ Add Account</button>
-        </div>
-        <input type="password" id="passInput" placeholder="Enter password...">
-        <button onclick="checkPass()">Login</button>
-        <button onclick="shutdown()">Shutdown</button>
-      `;
+      screen.innerHTML = `<h1>AndlandOS v${state.version}</h1>
+        <div>${state.accounts.map((a, i) => `<button class="btn" onclick="state.activeUserIdx=${i}; render()">${a.user}</button>`).join('')}</div>
+        <input type="password" id="passInput" placeholder="Password (default 1234)">
+        <button class="btn" onclick="checkPass()">Login</button>
+        <button class="btn" onclick="addAccount()">+ Add Account</button>
+        <button class="btn" onclick="shutdown()">Shutdown</button>`;
+    } else if (state.phase === "DESKTOP") {
+      screen.innerHTML = `<h1>Desktop</h1>
+        <button class="btn" onclick="state.phase='CONSOLE'; render()">[1] Console</button>
+        <button class="btn" onclick="state.phase='SETTINGS'; render()">[2] Settings</button>
+        <button class="btn" onclick="state.phase='LOCKSCREEN'; render()">[L] Lock OS</button>`;
+    } else if (state.phase === "CONSOLE") {
+      screen.innerHTML = `<h1>Console</h1><div id="terminal">${state.consoleBuffer.join('<br>')}</div>
+        <input id="termInput" onkeydown="if(event.key==='Enter') runCmd(this.value)">
+        <button class="btn" onclick="state.phase='DESKTOP'; render()">[D] Back</button>`;
+    } else if (state.phase === "SETTINGS") {
+      screen.innerHTML = `<h1>Settings</h1>
+        <button class="btn" onclick="changeCreds('user')">Change Username</button>
+        <button class="btn" onclick="changeCreds('pass')">Change Password</button>
+        <button class="btn" onclick="state.phase='DESKTOP'; render()">[D] Back</button>`;
     }
-    // Add logic for DESKTOP, CONSOLE (with input field), and SETTINGS (with prompt/input)
   }
 
-  function addAccount() {
-    let name = prompt("Enter new username:");
-    if(name) state.accounts.push({user: name, pass: "0000"});
-    localStorage.setItem('andland_accounts', JSON.stringify(state.accounts));
+  function checkPass() {
+    if (document.getElementById('passInput').value === state.accounts[state.activeUserIdx].pass) {
+      state.phase = "DESKTOP"; render();
+    } else { alert("Wrong Password!"); }
+  }
+
+  function runCmd(val) {
+    state.consoleBuffer.push("> " + val);
+    if(val === 'reset') { localStorage.clear(); location.reload(); }
     render();
   }
 
-  function shutdown() { screen.innerHTML = "Shutting down AndlandOS safely..."; }
+  function changeCreds(type) {
+    let newVal = prompt("Enter new " + type + ":");
+    if(newVal) {
+      state.accounts[state.activeUserIdx][type === 'user' ? 'user' : 'pass'] = newVal;
+      localStorage.setItem('andland_accounts', JSON.stringify(state.accounts));
+      render();
+    }
+  }
+
+  function addAccount() {
+    let name = prompt("Username:");
+    if(name) { state.accounts.push({user: name, pass: "1234"}); localStorage.setItem('andland_accounts', JSON.stringify(state.accounts)); render(); }
+  }
+
+  function shutdown() { screen.innerHTML = "Shutting down... Please refresh to reboot."; }
 
   render();
 </script>
