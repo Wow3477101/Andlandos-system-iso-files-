@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+  body { margin: 0; background: #0a0a0c; color: #fff; font-family: monospace; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
+  #screen { width: 800px; height: 600px; background: #15151a; position: relative; }
+  /* Add your UI styling here */
+</style>
+</head>
+<body>
+
+<div id="screen"></div>
+
+<script>
+  // State Management
+  const state = {
+    version: "1.3",
+    accounts: JSON.parse(localStorage.getItem('andland_accounts')) || [{user: "User", pass: "1234"}],
+    activeUserIdx: 0,
+    phase: "LOCKSCREEN" // LOCKSCREEN, DESKTOP, CONSOLE, SETTINGS
+  };
+
+  function render() {
+    const screen = document.getElementById('screen');
+    screen.innerHTML = `<h1>AndlandOS v${state.version}</h1>`;
+    
+    if (state.phase === "LOCKSCREEN") {
+      screen.innerHTML += `
+        <div id="account-select">
+          ${state.accounts.map((acc, i) => `<button onclick="state.activeUserIdx=${i}; render()">${acc.user}</button>`).join('')}
+          <button onclick="addAccount()">+ Add Account</button>
+        </div>
+        <input type="password" id="passInput" placeholder="Enter password...">
+        <button onclick="checkPass()">Login</button>
+        <button onclick="shutdown()">Shutdown</button>
+      `;
+    }
+    // Add logic for DESKTOP, CONSOLE (with input field), and SETTINGS (with prompt/input)
+  }
+
+  function addAccount() {
+    let name = prompt("Enter new username:");
+    if(name) state.accounts.push({user: name, pass: "0000"});
+    localStorage.setItem('andland_accounts', JSON.stringify(state.accounts));
+    render();
+  }
+
+  function shutdown() { screen.innerHTML = "Shutting down AndlandOS safely..."; }
+
+  render();
+</script>
+</body>
+</html>
