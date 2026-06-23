@@ -1,0 +1,194 @@
+const canvas = document.getElementById('andlandScreen');
+const ctx = canvas.getContext('2d');
+
+let currentPhase = "Booting"; 
+let bootStep = 0;
+let isSystemOn = true;
+let typedPassword = "";
+const correctPassword = "1234";
+let loginError = false;
+
+const bootLogs = [
+    "[ OK ] Loading AndlandOS Bios Subsystems...",
+    "[ OK ] Mounting Virtual Root Directories...",
+    "[ OK ] Initializing Security Firewalls...",
+    "ANDLANDOS SECURE KERNEL LOADED CORE COMPONENT."
+];
+
+const icons = [
+    { name: "Console",  x: 220, y: 120, w: 80, h: 80, color: "#39ff14", app: "Terminal" },
+    { name: "Settings", x: 340, y: 120, w: 80, h: 80, color: "#007aff", app: "Settings" },
+    { name: "Power Off",x: 460, y: 120, w: 80, h: 80, color: "#ff453a", app: "Shutdown" }
+];
+
+function drawText(text, size, color, x, y, bold) {
+    ctx.fillStyle = color;
+    ctx.font = (bold ? "bold " : "") + size + "px monospace";
+    ctx.fillText(text, x, y);
+}
+
+function render() {
+    if (!isSystemOn) {
+        ctx.fillStyle = "#000000";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        return;
+    }
+
+    ctx.fillStyle = "#0f0f12";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    if (currentPhase === "Booting") {
+        for (let i = 0; i <= bootStep; i++) {
+            let color = "#39ff14";
+            if (bootLogs[i].includes("[WARN]")) color = "#ff453a"; 
+            drawText(bootLogs[i], 15, color, 50, 100 + (i * 35), false);
+        }
+        ctx.fillStyle = "#007aff";
+        ctx.fillRect(50, 480, (bootStep + 1) * 160, 15);
+        return;
+    }
+
+    if (currentPhase === "Locked") {
+        ctx.fillStyle = "#232328";
+        ctx.fillRect(150, 130, 500, 340);
+        drawText("ANDLANDOS SECURE LOCK", 26, "#007aff", 230, 180, true);
+        drawText("Enter User Password to decrypt desktop:", 14, "#a0a0a5", 230, 230, false);
+        
+        ctx.fillStyle = "#000000";
+        ctx.fillRect(250, 270, 300, 45);
+        ctx.strokeStyle = loginError ? "#ff453a" : "#007aff";
+        ctx.lineWidth = 2;
+        ctx.strokeRect(250, 270, 300, 45);
+        
+        let stars = "";
+        for(let i=0; i<typedPassword.length; i++) { stars += "*"; }
+        drawText(stars, 24, "#ffffff", 270, 303, false);
+        
+        if (loginError) {
+            drawText("INCORRECT PASSWORD - TRY AGAIN", 12, "#ff453a", 295, 345, true);
+        } else {
+            drawText("Type password on keyboard & press ENTER", 12, "#707075", 255, 345, false);
+        }
+        return;
+    }
+
+    ctx.fillStyle = "#232328";
+    ctx.fillRect(0, 0, canvas.width, 40);
+    drawText("AndlandOS v1.1 unstable", 14, "#007aff", 20, 25, true);
+    drawText("SYSTEM ACTIVE", 14, "#f0f0f5", 660, 25, false);
+
+    ctx.fillStyle = "#232328";
+    ctx.fillRect(10, 60, 160, 520);
+    drawText("NAVIGATION", 12, "#a0a0a5", 25, 90, true);
+    drawText("[D] Desktop", 14, "#f0f0f5", 25, 130, false);
+    drawText("[1] Console", 14, "#39ff14", 25, 170, false);
+    drawText("[2] Settings", 14, "#007aff", 25, 210, false);
+    
+    ctx.fillStyle = "#ff453a";
+    ctx.fillRect(20, 520, 140, 35);
+    drawText("SHUTDOWN", 12, "#ffffff", 50, 542, true);
+
+    if (currentPhase === "Desktop") {
+        drawText("Welcome, Alex", 24, "#f0f0f5", 220, 80, true);
+        icons.forEach(function(icon) {
+            ctx.fillStyle = "#232328";
+            ctx.fillRect(icon.x, icon.y, icon.w, icon.h);
+            ctx.fillStyle = icon.color;
+            ctx.fillRect(icon.x, icon.y + 70, icon.w, 10);
+            drawText(icon.name, 12, "#f0f0f5", icon.x + 5, icon.y + 40, false);
+        });
+    } else if (currentPhase === "Terminal") {
+        ctx.fillStyle = "#000000";
+        ctx.fillRect(190, 60, 590, 520);
+        ctx.fillStyle = "#007aff";
+        ctx.fillRect(190, 60, 590, 30);
+        drawText("AndlandOS System Terminal", 14, "#ffffff", 205, 80, true);
+        drawText("alex@andlandos_vm:~$ security_status", 14, "#39ff14", 205, 120, false);
+        drawText("User Authenticated: True via UI Panel", 14, "#f0f0f5", 205, 150, false);
+        drawText("Encryption Core: AES-1234 Active", 14, "#f0f0f5", 205, 170, false);
+        drawText("Press 'D' to escape window container.", 12, "#a0a0a5", 205, 560, false);
+    } else if (currentPhase === "Settings") {
+        ctx.fillStyle = "#1c1c21";
+        ctx.fillRect(190, 60, 590, 520);
+        drawText("Control Panel & Settings", 26, "#ffffff", 210, 100, true);
+        ctx.fillStyle = "#232328";
+        ctx.fillRect(210, 140, 550, 90);
+        drawText("SECURITY PROFILE", 12, "#007aff", 225, 160, true);
+        drawText("Screen Lock Status: Unlocked", 14, "#f0f0f5", 225, 185, false);
+        drawText("System Keyphrase: 1234", 14, "#39ff14", 225, 205, false);
+        drawText("Press 'D' to return to desktop grid view.", 12, "#a0a0a5", 210, 560, false);
+    } else if (currentPhase === "Shutdown") {
+        ctx.fillStyle = "#000000";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        drawText("Shutting down AndlandOS safely...", 20, "#ff453a", 240, 260, true);
+        setTimeout(function() {
+            isSystemOn = false;
+            render();
+        }, 2000);
+    }
+}
+
+const bootTimer = setInterval(function() {
+    if (bootStep < bootLogs.length - 1) {
+        bootStep++;
+        render();
+    } else {
+        clearInterval(bootTimer);
+        currentPhase = "Locked"; 
+        render();
+    }
+}, 700);
+
+window.addEventListener('keydown', function(e) {
+    if (!isSystemOn) return;
+    if (currentPhase === "Locked") {
+        loginError = false; 
+        if (e.key >= "0" && e.key <= "9") {
+            if (typedPassword.length < 6) typedPassword += e.key;
+        } 
+        else if (e.key === "Backspace") {
+            typedPassword = typedPassword.slice(0, -1);
+        } 
+        else if (e.key === "Enter") {
+            if (typedPassword === correctPassword) {
+                currentPhase = "Desktop"; 
+                typedPassword = "";
+            } else {
+                typedPassword = "";
+                loginError = true;
+            }
+        }
+        render();
+        return;
+    }
+    const key = e.key.toUpperCase();
+    if (key === '1') currentPhase = "Terminal";
+    if (key === '2') currentPhase = "Settings";
+    if (key === 'D') currentPhase = "Desktop";
+    render();
+});
+
+canvas.addEventListener('click', function(e) {
+    if (currentPhase === "Booting" || currentPhase === "Locked" || !isSystemOn) return;
+    const rect = canvas.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+
+    if (mouseX >= 20 && mouseX <= 160 && mouseY >= 520 && mouseY <= 555) {
+        currentPhase = "Shutdown";
+        render();
+        return;
+    }
+
+    if (currentPhase === "Desktop") {
+        icons.forEach(function(icon) {
+            if (mouseX >= icon.x && mouseX <= (icon.x + icon.w) &&
+                mouseY >= icon.y && mouseY <= (icon.y + icon.h)) {
+                currentPhase = icon.app;
+                render();
+            }
+        });
+    }
+});
+
+render();
